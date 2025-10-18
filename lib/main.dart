@@ -15,7 +15,13 @@ class SmartStackApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart-Stack',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepPurple,
+        primaryColor: const Color(0xFF6C63FF),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6C63FF),
+          primary: const Color(0xFF6C63FF),
+          secondary: const Color(0xFF5A52E8),
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const SplashScreen(),
@@ -71,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue,
+      backgroundColor: const Color(0xFF6C63FF),
       body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'camera_scanner.dart';
+import 'business_card_screen.dart';
+import 'personal_card_screen.dart';
+import 'other_card_screen.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -473,21 +476,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'subtitle': 'Professional networking cards',
         'icon': Icons.business_center_rounded,
         'color': const Color(0xFF3182CE),
-        'action': () => _showTopRightAlert('Business Cards - Coming Soon!'),
+        'action': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
+        ),
       },
       {
         'title': 'Personal Cards',
         'subtitle': 'Personal contact information',
         'icon': Icons.person_rounded,
         'color': const Color(0xFF38A169),
-        'action': () => _showTopRightAlert('Personal Cards - Coming Soon!'),
+        'action': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PersonalCardScreen()),
+        ),
       },
       {
         'title': 'Other Cards',
         'subtitle': 'Miscellaneous card types',
         'icon': Icons.credit_card_rounded,
         'color': const Color(0xFFD69E2E),
-        'action': () => _showTopRightAlert('Other Cards - Coming Soon!'),
+        'action': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const OtherCardScreen()),
+        ),
       },
     ];
 
