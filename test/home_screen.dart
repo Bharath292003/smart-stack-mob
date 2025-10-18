@@ -1,33 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'login_page.dart';
-import 'camera_scanner.dart';
-import 'business_card_screen.dart';
-import 'personal_card_screen.dart';
-import 'other_card_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../providers/card_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/card_model.dart';
+import 'card_collection_screen.dart';
+import 'profile_screen.dart';
 
-class HomePage extends StatefulWidget {
-  final String userName;
-  final String phoneNumber;
-
-  const HomePage({
-    super.key,
-    required this.userName,
-    required this.phoneNumber,
-  });
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: _currentIndex == 0 ? _buildHomeContent() : _buildProfileContent(),
+      body: _currentIndex == 0 ? _buildHomeContent() : const ProfileScreen(),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
@@ -84,110 +78,115 @@ class _HomePageState extends State<HomePage> {
                     ),
                     SizedBox(height: 24),
                     // Stats Card
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Consumer<CardProvider>(
+                      builder: (context, cardProvider, child) {
+                        final totalCards = cardProvider.cards.length;
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: EdgeInsets.all(24),
+                          child: Column(
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Total Cards',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 14,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Total Cards',
+                                        style: TextStyle(
+                                          color: Color(0xFFC7D2FE),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '$totalCards',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 40,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    '12',
-                                    style: TextStyle(
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: EdgeInsets.all(16),
+                                    child: Icon(
+                                      Icons.grid_view,
                                       color: Colors.white,
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
+                                      size: 32,
                                     ),
                                   ),
                                 ],
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: EdgeInsets.all(16),
-                                child: Icon(
-                                  Icons.grid_view,
-                                  color: Colors.white,
-                                  size: 32,
-                                ),
+                              SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'This Month',
+                                        style: TextStyle(
+                                          color: Color(0xFFC7D2FE),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '+${(totalCards * 0.2).round()}',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(width: 16),
+                                  Container(
+                                    width: 1,
+                                    height: 40,
+                                    color: Color(0xFF818CF8),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Categories',
+                                        style: TextStyle(
+                                          color: Color(0xFFC7D2FE),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '4',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'This Month',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '+3',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(width: 16),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Color(0xFF818CF8),
-                              ),
-                              SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Categories',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '4',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -201,14 +200,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CameraScannerPage(),
-                          ),
-                        );
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Color(0xFF4F46E5),
@@ -287,56 +279,163 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCardCategories() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+  Widget _buildHeader() {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hello, ${authProvider.currentUser?.name ?? 'User'}!',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Welcome back to Smart-Stack',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAppBranding() {
+    return Center(
       child: Column(
         children: [
-          _buildCategoryCard(
-            title: 'Business Cards',
-            subtitle: '24 cards',
-            icon: Icons.business_center,
-            gradientColors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.credit_card,
+              color: Colors.white,
+              size: 40,
             ),
           ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Personal',
-            subtitle: '12 cards',
-            icon: Icons.person,
-            gradientColors: [Color(0xFFA855F7), Color(0xFF9333EA)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const PersonalCardScreen()),
+          const SizedBox(height: 16),
+          const Text(
+            'Smart-Stack',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
             ),
           ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Favorites',
-            subtitle: '8 cards',
-            icon: Icons.star,
-            gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const OtherCardScreen()),
-            ),
-          ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Important',
-            subtitle: '15 cards',
-            icon: Icons.flag,
-            gradientColors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
+          const SizedBox(height: 8),
+          const Text(
+            'Your Digital Wallet, Redefined',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF6B7280),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCardCategories() {
+    return Consumer<CardProvider>(
+      builder: (context, cardProvider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Card Categories',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              children: [
+                _buildCategoryCard(
+                  title: 'Business Cards',
+                  subtitle: 'Professional contacts',
+                  icon: Icons.business_center,
+                  gradientColors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  count: 24,
+                  onTap: () => _navigateToCardCollection(CardType.business),
+                ),
+                SizedBox(height: 12),
+                _buildCategoryCard(
+                  title: 'Personal',
+                  subtitle: 'Friends & family',
+                  icon: Icons.person,
+                  gradientColors: [Color(0xFFA855F7), Color(0xFF9333EA)],
+                  count: 12,
+                  onTap: () => _navigateToCardCollection(CardType.personal),
+                ),
+                SizedBox(height: 12),
+                _buildCategoryCard(
+                  title: 'Favorites',
+                  subtitle: 'Most important contacts',
+                  icon: Icons.star,
+                  gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  count: 8,
+                  onTap: () => _navigateToCardCollection(CardType.other),
+                ),
+                SizedBox(height: 12),
+                _buildCategoryCard(
+                  title: 'Important',
+                  subtitle: 'Priority contacts',
+                  icon: Icons.flag,
+                  gradientColors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  count: 15,
+                  onTap: () => _navigateToCardCollection(CardType.business),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -345,6 +444,7 @@ class _HomePageState extends State<HomePage> {
     required String subtitle,
     required IconData icon,
     required List<Color> gradientColors,
+    required int count,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -403,7 +503,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    '$count cards',
                     style: TextStyle(
                       fontSize: 14,
                       color: Color(0xFF64748B),
@@ -450,7 +550,7 @@ class _HomePageState extends State<HomePage> {
                           left: 40,
                           child: Container(
                             width: 32,
-            height: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
@@ -548,100 +648,109 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProfileContent() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+  Widget _buildRecentCards() {
+    return Consumer<CardProvider>(
+      builder: (context, cardProvider, child) {
+        final recentCards = cardProvider.cards.take(3).toList();
+        
+        if (recentCards.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Profile',
+            const Text(
+              'Recent Cards',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
+                color: Color(0xFF1F2937),
               ),
             ),
-            SizedBox(height: 24),
-            Container(
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    widget.userName,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    widget.phoneNumber,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.clear();
-                      
-                      if (mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginPage()),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFEF4444),
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 16),
+            ...recentCards.map((card) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildRecentCardItem(card),
+            )),
           ],
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentCardItem(CardModel card) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Color(int.parse(card.colorScheme.replaceFirst('#', '0xFF'))),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.person,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  card.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  card.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            _getCardTypeIcon(card.type),
+            color: const Color(0xFF9CA3AF),
+            size: 20,
+          ),
+        ],
       ),
     );
+  }
+
+  IconData _getCardTypeIcon(CardType type) {
+    switch (type) {
+      case CardType.business:
+        return Icons.business_center;
+      case CardType.personal:
+        return Icons.person;
+      case CardType.other:
+        return Icons.category;
+    }
   }
 
   Widget _buildBottomNavigationBar() {
@@ -659,19 +768,9 @@ class _HomePageState extends State<HomePage> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (index == 1) {
-            // Scan button - navigate to camera
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CameraScannerPage(),
-              ),
-            );
-          } else {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
+          setState(() {
+            _currentIndex = index;
+          });
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -703,6 +802,16 @@ class _HomePageState extends State<HomePage> {
             label: 'Profile',
           ),
         ],
+      ),
+    );
+  }
+
+  void _navigateToCardCollection(CardType type) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CardCollectionScreen(
+          cardType: type.toString().split('.').last.replaceAll('_', ' ').split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' '),
+        ),
       ),
     );
   }
