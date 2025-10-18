@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "403502148741",
+    "project_id": "cardify-b8c2b",
+    "storage_bucket": "cardify-b8c2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:403502148741:android:25e002a8c33e30623ccdec",
+        "android_client_info": {
+          "package_name": "com.example.business_card_reader"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWZBbFcFZtNenbi-K33aaIbgOpLGHBdH0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

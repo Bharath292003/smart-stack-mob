@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'login_page.dart';
 import 'home_page.dart';
+import 'welcome_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const SmartStackApp());
 }
 
@@ -38,33 +46,28 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkLoginStatus();
   }
 
-  Future<void> _checkLoginStatus() async {
-    await Future.delayed(const Duration(seconds: 2)); // Splash screen delay
+  void _checkLoginStatus() async {
+    await Future.delayed(const Duration(seconds: 2));
     
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    final userName = prefs.getString('user_name') ?? '';
-    final phoneNumber = prefs.getString('user_phone') ?? '';
-
-    if (mounted) {
-      if (isLoggedIn && userName.isNotEmpty) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePage(
-              userName: userName,
-              phoneNumber: phoneNumber,
-            ),
+    User? user = FirebaseAuth.instance.currentUser;
+    
+    if (user != null && user.emailVerified) {
+      // User is logged in and email is verified
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            userName: user.displayName ?? user.email ?? 'User',
+            phoneNumber: '', // Firebase doesn't store phone by default
           ),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
-          ),
-        );
-      }
+        ),
+      );
+    } else {
+      // User is not logged in or email not verified
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      );
     }
   }
 

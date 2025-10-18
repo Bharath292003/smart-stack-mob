@@ -31,6 +31,24 @@
 
   <title>smart_stack</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBWZBbFcFZtNenbi-K33aaIbgOpLGHBdH0",
+      authDomain: "cardify-b8c2b.firebaseapp.com",
+      projectId: "cardify-b8c2b",
+      storageBucket: "cardify-b8c2b.firebasestorage.app",
+      messagingSenderId: "403502148741",
+      appId: "1:403502148741:web:25e002a8c33e30623ccdec"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
