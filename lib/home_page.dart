@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'login_page.dart';
@@ -8,6 +9,7 @@ import 'camera_scanner.dart';
 import 'business_card_screen.dart';
 import 'personal_card_screen.dart';
 import 'other_card_screen.dart';
+import 'profile_screen.dart';
 import 'user_session.dart';
 import 'session_debug_helper.dart';
 import 'models.dart';
@@ -156,6 +158,15 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _onProfileTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return HomeScreen(
@@ -165,6 +176,7 @@ class _HomePageState extends State<HomePage> {
       isCardFlipped: _isCardFlipped,
       onFlipCard: () => setState(() => _isCardFlipped = !_isCardFlipped),
       onCategoryTap: _onCategoryTap,
+      onProfileTap: _onProfileTap,
     );
   }
 }
@@ -177,6 +189,7 @@ class HomeScreen extends StatelessWidget {
   final bool isCardFlipped;
   final VoidCallback onFlipCard;
   final Function(String) onCategoryTap;
+  final VoidCallback onProfileTap;
 
   const HomeScreen({
     Key? key,
@@ -186,6 +199,7 @@ class HomeScreen extends StatelessWidget {
     required this.isCardFlipped,
     required this.onFlipCard,
     required this.onCategoryTap,
+    required this.onProfileTap,
   }) : super(key: key);
 
   @override
@@ -210,16 +224,166 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CameraScannerPage()),
-          );
-        },
+        onPressed: () => _showCameraOptions(context),
         backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20),
+        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
       ),
     );
+  }
+
+  void _showCameraOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Title
+              const Text(
+                'Add Business Card',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Options
+              ListTile(
+                leading: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Color(0xFF0F172A),
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Take Photo',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                subtitle: const Text(
+                  'Capture a business card with camera',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CameraScannerPage()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.photo_library,
+                    color: Color(0xFF0F172A),
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Upload from Gallery',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                subtitle: const Text(
+                  'Choose an image from your device',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromGallery(context);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _pickImageFromGallery(BuildContext context) async {
+    try {
+      final ImagePicker imagePicker = ImagePicker();
+      final XFile? image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Image selected successfully!'),
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        
+        // Here you can process the image or navigate to a processing screen
+        // For now, we'll just show the success message
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting image: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildHeader() {
@@ -265,11 +429,23 @@ class HomeScreen extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                child: const Icon(
-                  Icons.more_vert,
-                  color: Color(0xFF475569),
-                  size: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
                 ),
+                child: IconButton(
+                   onPressed: onProfileTap,
+                   icon: const Icon(
+                     Icons.person_outline,
+                     color: Color(0xFF475569),
+                     size: 20,
+                   ),
+                   padding: EdgeInsets.zero,
+                 ),
               ),
             ],
           ),

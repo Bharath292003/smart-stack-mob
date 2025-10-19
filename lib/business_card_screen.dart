@@ -54,6 +54,10 @@ class CardModel {
   static Color _getRandomColor() {
     return AppColors.getRandomBusinessColor();
   }
+  
+  static Color _getColorByIndex(int index) {
+    return AppColors.getBusinessColorByIndex(index);
+  }
 }
 
 class CompactBusinessCard extends StatelessWidget {
@@ -248,190 +252,327 @@ class ExpandedCardDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                decoration: BoxDecoration(
-                  color: card.color,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
+    return GestureDetector(
+      onTap: onClose,
+      child: Container(
+        color: Colors.black.withOpacity(0.6),
+        child: GestureDetector(
+          onTap: () {}, // Prevent closing when tapping dialog
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Color(0xFFE2E8F0),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                card.name ?? card.company ?? 'Unknown',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              if (card.jobTitle != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  card.jobTitle!,
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                              if (card.company != null && card.name != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  card.company!,
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ],
+                        const Text(
+                          'Card Details',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF0F172A),
                           ),
                         ),
                         GestureDetector(
                           onTap: onClose,
                           child: Container(
-                            width: 32,
-                            height: 32,
+                            width: 36,
+                            height: 36,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (card.email != null)
-                      _buildContactRow(Icons.email_outlined, card.email!),
-                    if (card.email != null && card.phone != null)
-                      const SizedBox(height: 16),
-                    if (card.phone != null)
-                      _buildContactRow(Icons.phone_outlined, card.phone!),
-                    if (card.phone != null && card.website != null)
-                      const SizedBox(height: 16),
-                    if (card.website != null)
-                      _buildContactRow(Icons.language, card.website!),
-                    if (card.website != null && card.address != null)
-                      const SizedBox(height: 16),
-                    if (card.address != null)
-                      _buildContactRow(Icons.location_on_outlined, card.address!),
-                    if (card.additionalInfo != null) ...[
-                      const SizedBox(height: 16),
-                      _buildContactRow(Icons.info_outline, card.additionalInfo!),
-                    ],
-                    const SizedBox(height: 24),
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF1F5F9),
-                              foregroundColor: const Color(0xFF334155),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Share',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Contact',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                                color: Colors.white,
+                            child: const Center(
+                              child: Text(
+                                '×',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w300,
+                                  color: Color(0xFF334155),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Card Header - ATM Card Style
+                          AspectRatio(
+                            aspectRatio: 1.586, // Standard ATM card ratio
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: card.color,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Top Section
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.work_outline,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.star_border,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Middle Section - Name and Title
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        card.name ?? 'Unknown',
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                          letterSpacing: -0.3,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      if (card.jobTitle != null && card.jobTitle!.isNotEmpty)
+                                        Text(
+                                          card.jobTitle!,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.white.withOpacity(0.8),
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                  // Bottom Section - Company and Contact
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (card.company != null && card.company!.isNotEmpty)
+                                        Text(
+                                          card.company!,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.white.withOpacity(0.95),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      const SizedBox(height: 8),
+                                      if (card.email != null && card.email!.isNotEmpty)
+                                        Text(
+                                          card.email!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Contact Information
+                          const Text(
+                            'CONTACT INFORMATION',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (card.email != null)
+                            _buildInfoItem(Icons.email_outlined, 'Email', card.email!),
+                          if (card.email != null) const SizedBox(height: 16),
+                          if (card.phone != null)
+                            _buildInfoItem(Icons.phone_outlined, 'Phone', card.phone!),
+                          if (card.phone != null) const SizedBox(height: 16),
+                          if (card.website != null)
+                            _buildInfoItem(Icons.language, 'Website', card.website!),
+                          if (card.website != null) const SizedBox(height: 16),
+                          if (card.address != null)
+                            _buildInfoItem(Icons.location_on_outlined, 'Location', card.address!),
+                          const SizedBox(height: 32),
+                          // Action Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'Contact',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'Share',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildContactRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: const Color(0xFF64748B)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF475569),
+  Widget _buildInfoItem(IconData icon, String label, String value) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: const Color(0xFFE2E8F0),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF475569),
+              size: 20,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -527,11 +668,26 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                               padding: const EdgeInsets.all(24),
                               itemCount: _businessCards.length,
                               itemBuilder: (context, index) {
+                                final card = _businessCards[index];
+                                // Create a new card with color based on index
+                                final cardWithColor = CardModel(
+                                  cardId: card.cardId,
+                                  name: card.name,
+                                  jobTitle: card.jobTitle,
+                                  company: card.company,
+                                  email: card.email,
+                                  phone: card.phone,
+                                  website: card.website,
+                                  address: card.address,
+                                  additionalInfo: card.additionalInfo,
+                                  socialMedia: card.socialMedia,
+                                  color: CardModel._getColorByIndex(index),
+                                );
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: CompactBusinessCard(
-                                    card: _businessCards[index],
-                                    onTap: () => setState(() => _expandedCard = _businessCards[index]),
+                                    card: cardWithColor,
+                                    onTap: () => setState(() => _expandedCard = cardWithColor),
                                   ),
                                 );
                               },
