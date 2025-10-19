@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'home_page.dart';
+import 'user_session.dart';
 
 void main() {
   runApp(const SmartStackApp());
@@ -47,10 +48,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkLoginStatus() async {
     await Future.delayed(const Duration(seconds: 2)); // Splash screen delay
     
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    final userName = prefs.getString('user_name') ?? '';
-    final phoneNumber = prefs.getString('user_phone') ?? '';
+    // Use UserSession for consistent session management
+    final isLoggedIn = await UserSession.isLoggedIn();
+    final userName = await UserSession.getUserName() ?? '';
+    final phoneNumber = await UserSession.getUserPhone() ?? '';
 
     if (mounted) {
       if (isLoggedIn && userName.isNotEmpty) {

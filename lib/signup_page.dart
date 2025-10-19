@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home_page.dart';
+import 'user_session.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -72,13 +73,29 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin {
 
         if (response.statusCode == 200 || response.statusCode == 201) {
           // Registration successful
+          final responseData = json.decode(response.body);
+          
+          // Extract user data from response
+          String userId = responseData['user_id']?.toString() ?? '';
+          String userName = _nameController.text;
+          String userPhone = _phoneController.text;
+          
+          // Save user data using UserSession utility
+          if (userId.isNotEmpty) {
+            await UserSession.saveUserData(
+              userId: userId,
+              phone: userPhone,
+              userName: userName,
+            );
+          }
+          
           if (mounted) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => HomePage(
-                  userName: _nameController.text,
-                  phoneNumber: _phoneController.text,
+                  userName: userName,
+                  phoneNumber: userPhone,
                 ),
               ),
             );

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home_page.dart';
 import 'signup_page.dart';
+import 'user_session.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -70,15 +71,26 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           // Login successful
           final responseData = json.decode(response.body);
           
-          // Save login state and user data
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_phone', _phoneController.text);
-          await prefs.setBool('is_logged_in', true);
-          
-          // Extract user name from response if available
+          // Extract user data from response
+          String userId = responseData['user_id']?.toString() ?? '';
           String userName = responseData['user_name'] ?? responseData['name'] ?? '';
-          if (userName.isNotEmpty) {
-            await prefs.setString('user_name', userName);
+          String userPhone = _phoneController.text;
+          
+          // Save user data using UserSession utility
+          if (userId.isNotEmpty) {
+            await UserSession.saveUserData(
+              userId: userId,
+              phone: userPhone,
+              userName: userName.isNotEmpty ? userName : null,
+            );
+          } else {
+            // Fallback to manual SharedPreferences if user_id is missing
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('user_phone', userPhone);
+            await prefs.setBool('is_logged_in', true);
+            if (userName.isNotEmpty) {
+              await prefs.setString('user_name', userName);
+            }
           }
 
           if (mounted) {
@@ -87,7 +99,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               MaterialPageRoute(
                 builder: (context) => HomePage(
                   userName: userName,
-                  phoneNumber: _phoneController.text,
+                  phoneNumber: userPhone,
                 ),
               ),
             );

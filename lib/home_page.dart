@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'login_page.dart';
 import 'camera_scanner.dart';
 import 'business_card_screen.dart';
 import 'personal_card_screen.dart';
 import 'other_card_screen.dart';
+import 'user_session.dart';
+import 'session_debug_helper.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -22,6 +26,52 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+  int _totalCards = 0;
+  bool _isLoadingCards = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTotalCards();
+  }
+
+  Future<void> _fetchTotalCards() async {
+    try {
+      final userId = await UserSession.getUserId();
+      if (userId == null) {
+        print('User ID not found');
+        setState(() {
+          _isLoadingCards = false;
+        });
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://localhost:5001/cards/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _totalCards = data['total_cards'] ?? 0;
+          _isLoadingCards = false;
+        });
+      } else {
+        print('Failed to fetch cards: ${response.statusCode}');
+        setState(() {
+          _isLoadingCards = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching total cards: $e');
+      setState(() {
+        _isLoadingCards = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +161,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    '12',
+                                    _isLoadingCards ? '...' : '$_totalCards',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 40,
@@ -610,13 +660,20 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.clear();
+                      // Debug current session state before logout
+                      await SessionDebugHelper.debugSessionState();
+                      
+                      // Force complete logout using debug helper
+                      await SessionDebugHelper.forceLogout();
+                      
+                      // Debug session state after logout
+                      await SessionDebugHelper.debugSessionState();
                       
                       if (mounted) {
-                        Navigator.pushReplacement(
+                        Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginPage()),
+                          (route) => false, // Remove all previous routes
                         );
                       }
                     },
