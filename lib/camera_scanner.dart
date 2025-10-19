@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
+import 'widgets/custom_bottom_navigation_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class CameraScannerPage extends StatefulWidget {
@@ -296,6 +297,9 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
                 ],
               ),
             ),
+      bottomNavigationBar: const CustomBottomNavigationBar(
+        currentIndex: 1, // Scanner is at index 1
+      ),
     );
   }
 }

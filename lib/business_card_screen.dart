@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_session.dart';
 import 'app_colors.dart';
+import 'home_page.dart';
+import 'camera_scanner.dart';
+import 'profile_screen.dart';
 
 // Card Model
 class CardModel {
@@ -586,14 +589,46 @@ class BusinessCardScreen extends StatefulWidget {
 
 class _BusinessCardScreenState extends State<BusinessCardScreen> {
   List<CardModel> _businessCards = [];
+  List<CardModel> _filteredBusinessCards = [];
   bool _isLoading = true;
   int _totalCards = 0;
   CardModel? _expandedCard;
+  int _currentIndex = 0; // Home is at index 0
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _fetchBusinessCards();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+      _filterBusinessCards();
+    });
+  }
+
+  void _filterBusinessCards() {
+    if (_searchQuery.isEmpty) {
+      _filteredBusinessCards = List.from(_businessCards);
+    } else {
+      _filteredBusinessCards = _businessCards.where((card) {
+        return (card.name?.toLowerCase().contains(_searchQuery) ?? false) ||
+               (card.company?.toLowerCase().contains(_searchQuery) ?? false) ||
+               (card.jobTitle?.toLowerCase().contains(_searchQuery) ?? false) ||
+               (card.email?.toLowerCase().contains(_searchQuery) ?? false);
+      }).toList();
+    }
   }
 
   Future<void> _fetchBusinessCards() async {
@@ -628,6 +663,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
 
         setState(() {
           _businessCards = businessCards;
+          _filteredBusinessCards = List.from(businessCards);
           _totalCards = businessCards.length;
           _isLoading = false;
         });
@@ -642,6 +678,52 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _onBottomNavTap(int index) {
+    if (index == 0) {
+      // Navigate to Home - need to get userName first
+      _navigateToHome();
+    } else if (index == 1) {
+      // Navigate to Scanner
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CameraScannerPage()),
+      ).then((_) {
+        // Reset to no selection when returning
+        setState(() {
+          _currentIndex = -1;
+        });
+      });
+    } else if (index == 2) {
+      // Navigate to Profile
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      ).then((_) {
+        // Reset to no selection when returning
+        setState(() {
+          _currentIndex = -1;
+        });
+      });
+    }
+  }
+
+  Future<void> _navigateToHome() async {
+    final userName = await UserSession.getUserName();
+    final phoneNumber = await UserSession.getUserPhone();
+    
+    if (userName != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            userName: userName,
+            phoneNumber: phoneNumber,
+          ),
+        ),
+      );
     }
   }
 
@@ -662,13 +744,13 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                             color: Color(0xFF0F172A),
                           ),
                         )
-                      : _businessCards.isEmpty
+                      : _filteredBusinessCards.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
                               padding: const EdgeInsets.all(24),
-                              itemCount: _businessCards.length,
+                              itemCount: _filteredBusinessCards.length,
                               itemBuilder: (context, index) {
-                                final card = _businessCards[index];
+                                final card = _filteredBusinessCards[index];
                                 // Create a new card with color based on index
                                 final cardWithColor = CardModel(
                                   cardId: card.cardId,
@@ -703,10 +785,32 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.add, size: 20),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onBottomNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0F172A),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            activeIcon: Icon(Icons.camera_alt),
+            label: 'Scanner',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
@@ -793,8 +897,9 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
               ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const TextField(
-              decoration: InputDecoration(
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
                 hintText: 'Search business cards',
                 hintStyle: TextStyle(
                   color: Color(0xFF94A3B8),

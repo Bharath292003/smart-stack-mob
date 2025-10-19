@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_session.dart';
 import 'app_colors.dart';
+import 'home_page.dart';
+import 'camera_scanner.dart';
+import 'profile_screen.dart';
 
 class PersonalCardModel {
   final String? id;
@@ -56,6 +59,7 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
   bool _isLoading = true;
   int _totalCards = 0;
   PersonalCardModel? _expandedCard;
+  int _currentIndex = 0; // Home is at index 0
 
   @override
   void initState() {
@@ -109,6 +113,52 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _onBottomNavTap(int index) {
+    if (index == 0) {
+      // Navigate to Home - need to get userName first
+      _navigateToHome();
+    } else if (index == 1) {
+      // Navigate to Scanner
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CameraScannerPage()),
+      ).then((_) {
+        // Reset to no selection when returning
+        setState(() {
+          _currentIndex = -1;
+        });
+      });
+    } else if (index == 2) {
+      // Navigate to Profile
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      ).then((_) {
+        // Reset to no selection when returning
+        setState(() {
+          _currentIndex = -1;
+        });
+      });
+    }
+  }
+
+  Future<void> _navigateToHome() async {
+    final userName = await UserSession.getUserName();
+    final phoneNumber = await UserSession.getUserPhone();
+    
+    if (userName != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            userName: userName,
+            phoneNumber: phoneNumber,
+          ),
+        ),
+      );
     }
   }
 
@@ -243,6 +293,33 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onBottomNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0F172A),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            activeIcon: Icon(Icons.camera_alt),
+            label: 'Scanner',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }

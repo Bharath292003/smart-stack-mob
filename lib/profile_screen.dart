@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'user_session.dart';
 import 'login_page.dart';
 import 'app_colors.dart';
+import 'home_page.dart';
+import 'camera_scanner.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -16,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? userPhone;
   String? userId;
   bool isLoading = true;
+  int _currentIndex = 2; // Profile is at index 2
 
   @override
   void initState() {
@@ -91,6 +94,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
       }
+    }
+  }
+
+  void _onBottomNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    setState(() {
+      _currentIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        _navigateToHome();
+        break;
+      case 1:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const CameraScannerPage()),
+        );
+        break;
+      case 2:
+        // Already on Profile screen
+        break;
+    }
+  }
+
+  void _navigateToHome() async {
+    try {
+      final userName = await UserSession.getUserName();
+      final phoneNumber = await UserSession.getUserPhone();
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            userName: userName ?? 'User',
+            phoneNumber: phoneNumber ?? '',
+          ),
+        ),
+      );
+    } catch (e) {
+      // Handle error if needed
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomePage(
+            userName: 'User',
+            phoneNumber: '',
+          ),
+        ),
+      );
     }
   }
 
@@ -273,6 +327,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onBottomNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0F172A),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            activeIcon: Icon(Icons.camera_alt),
+            label: 'Scanner',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 

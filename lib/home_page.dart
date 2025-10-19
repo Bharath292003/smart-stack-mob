@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> {
   int _totalCards = 0;
   bool _isLoadingCards = false;
   bool _isCardFlipped = false;
+  int _currentIndex = 0; // For bottom navigation
   late BusinessCard currentUserCard;
   late List<Category> categories;
 
@@ -159,12 +160,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onProfileTap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ProfileScreen(),
-      ),
-    );
+    setState(() {
+      _currentIndex = 2;
+    });
+  }
+
+  void _onBottomNavTap(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    
+    switch (index) {
+      case 0:
+        // Home - already on home page
+        break;
+      case 1:
+        // Scanner
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const CameraScannerPage(),
+          ),
+        ).then((_) {
+          // Reset to home when returning from scanner
+          setState(() {
+            _currentIndex = 0;
+          });
+        });
+        break;
+      case 2:
+        // Profile
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ProfileScreen(),
+          ),
+        ).then((_) {
+          // Reset to home when returning from profile
+          setState(() {
+            _currentIndex = 0;
+          });
+        });
+        break;
+    }
   }
 
   @override
@@ -177,6 +215,8 @@ class _HomePageState extends State<HomePage> {
       onFlipCard: () => setState(() => _isCardFlipped = !_isCardFlipped),
       onCategoryTap: _onCategoryTap,
       onProfileTap: _onProfileTap,
+      currentIndex: _currentIndex,
+      onBottomNavTap: _onBottomNavTap,
     );
   }
 }
@@ -190,6 +230,8 @@ class HomeScreen extends StatelessWidget {
   final VoidCallback onFlipCard;
   final Function(String) onCategoryTap;
   final VoidCallback onProfileTap;
+  final int currentIndex;
+  final Function(int) onBottomNavTap;
 
   const HomeScreen({
     Key? key,
@@ -200,6 +242,8 @@ class HomeScreen extends StatelessWidget {
     required this.onFlipCard,
     required this.onCategoryTap,
     required this.onProfileTap,
+    required this.currentIndex,
+    required this.onBottomNavTap,
   }) : super(key: key);
 
   @override
@@ -223,10 +267,31 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCameraOptions(context),
-        backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: onBottomNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0F172A),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            activeIcon: Icon(Icons.camera_alt),
+            label: 'Scanner',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
@@ -401,7 +466,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,27 +489,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                   onPressed: onProfileTap,
-                   icon: const Icon(
-                     Icons.person_outline,
-                     color: Color(0xFF475569),
-                     size: 20,
-                   ),
-                   padding: EdgeInsets.zero,
-                 ),
               ),
             ],
           ),
