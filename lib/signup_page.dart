@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home_page.dart';
-import 'signup_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
+class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin {
+  final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -42,13 +43,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -56,48 +59,36 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:5001/login'),
+          Uri.parse('http://localhost:5001/register'),
           headers: {
             'Content-Type': 'application/json',
           },
           body: json.encode({
+            'user_name': _nameController.text,
             'phone': _phoneController.text,
             'password': _passwordController.text,
           }),
         );
 
-        if (response.statusCode == 200) {
-          // Login successful
-          final responseData = json.decode(response.body);
-          
-          // Save login state and user data
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_phone', _phoneController.text);
-          await prefs.setBool('is_logged_in', true);
-          
-          // Extract user name from response if available
-          String userName = responseData['user_name'] ?? responseData['name'] ?? '';
-          if (userName.isNotEmpty) {
-            await prefs.setString('user_name', userName);
-          }
-
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          // Registration successful
           if (mounted) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => HomePage(
-                  userName: userName,
+                  userName: _nameController.text,
                   phoneNumber: _phoneController.text,
                 ),
               ),
             );
           }
         } else {
-          // Login failed
+          // Registration failed
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Login failed: Invalid phone number or password'),
+                content: Text('Registration failed: ${response.body}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -126,6 +117,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      extendBodyBehindAppBar: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -175,24 +175,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Icon(
-                              Icons.credit_card_rounded,
+                              Icons.person_add_rounded,
                               size: 48,
                               color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: 24),
                           const Text(
-                            'Smart-Stack',
+                            'Create Account',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF2D3748),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Digital Business Card Manager',
+                            'Join Smart-Stack today',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
@@ -200,26 +200,21 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               fontWeight: FontWeight.w400,
                             ),
                           ),
-                          const SizedBox(height: 40),
-                          
-                          // Welcome Text
-                          const Text(
-                            'Welcome Back!',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF2D3748),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Please log in to continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
                           const SizedBox(height: 32),
+                          
+                          // Name Field
+                          _buildTextField(
+                            controller: _nameController,
+                            label: 'Full Name',
+                            icon: Icons.person_rounded,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
                           
                           // Phone Field
                           _buildTextField(
@@ -240,14 +235,54 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           const SizedBox(height: 20),
                           
                           // Password Field
-                          _buildPasswordField(),
+                          _buildPasswordField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            obscureText: _obscurePassword,
+                            onToggleVisibility: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Confirm Password Field
+                          _buildPasswordField(
+                            controller: _confirmPasswordController,
+                            label: 'Confirm Password',
+                            obscureText: _obscureConfirmPassword,
+                            onToggleVisibility: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please confirm your password';
+                              }
+                              if (value != _passwordController.text) {
+                                return 'Passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
                           const SizedBox(height: 32),
                           
-                          // Login Button
+                          // Sign Up Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _login,
+                              onPressed: _isLoading ? null : _signUp,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF6C63FF),
                                 foregroundColor: Colors.white,
@@ -262,17 +297,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       height: 20,
                                       width: 20,
                                       child: CircularProgressIndicator(
+                                        color: Colors.white,
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
                                     )
                                   : const Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.login_rounded, size: 20),
+                                        Icon(Icons.person_add_rounded, size: 20),
                                         SizedBox(width: 8),
                                         Text(
-                                          'Log In',
+                                          'Sign Up',
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
@@ -283,49 +318,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ),
                           ),
                           
-                          const SizedBox(height: 16),
-                          
-                          // Sign Up Option
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Don't have an account? ",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const SignUpPage(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  'Sign Up',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF6C63FF),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          
                           const SizedBox(height: 24),
                           
                           // Footer Text
                           Text(
-                            'Secure • Fast • Professional',
+                            'By signing up, you agree to our Terms & Privacy Policy',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
@@ -338,80 +340,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      style: const TextStyle(
-        fontSize: 16,
-        color: Color(0xFF2D3748),
-      ),
-      decoration: InputDecoration(
-        labelText: 'Password',
-        labelStyle: TextStyle(
-          color: Colors.grey[600],
-          fontWeight: FontWeight.w500,
-        ),
-        prefixIcon: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.lock_rounded,
-            color: Color(0xFF6C63FF),
-            size: 20,
-          ),
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey[600],
-          ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your password';
-        }
-        if (value.length < 6) {
-          return 'Password must be at least 6 characters';
-        }
-        return null;
-      },
     );
   }
 
@@ -447,6 +375,74 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             color: const Color(0xFF6C63FF),
             size: 20,
           ),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      validator: validator,
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscureText,
+    required VoidCallback onToggleVisibility,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(
+        fontSize: 16,
+        color: Color(0xFF2D3748),
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.lock_rounded,
+            color: Color(0xFF6C63FF),
+            size: 20,
+          ),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey[600],
+          ),
+          onPressed: onToggleVisibility,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
