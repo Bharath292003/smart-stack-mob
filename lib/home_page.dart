@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math' as math;
 import 'login_page.dart';
 import 'camera_scanner.dart';
 import 'business_card_screen.dart';
@@ -9,46 +10,98 @@ import 'personal_card_screen.dart';
 import 'other_card_screen.dart';
 import 'user_session.dart';
 import 'session_debug_helper.dart';
+import 'models.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
-  final String phoneNumber;
+  final String? phoneNumber;
 
   const HomePage({
-    super.key,
+    Key? key,
     required this.userName,
-    required this.phoneNumber,
-  });
+    this.phoneNumber,
+  }) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
   int _totalCards = 0;
-  bool _isLoadingCards = true;
+  bool _isLoadingCards = false;
+  bool _isCardFlipped = false;
+  late BusinessCard currentUserCard;
+  late List<Category> categories;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize current user card with actual user data
+    currentUserCard = BusinessCard(
+      id: 0,
+      name: widget.userName,
+      title: 'Your Title',
+      company: 'Your Company',
+      email: 'your.email@example.com',
+      phone: widget.phoneNumber ?? 'Your Phone',
+      website: 'www.yourwebsite.com',
+      location: 'Your Location',
+      color: const Color(0xFF0F172A),
+    );
+
+    // Initialize categories
+    categories = [
+      Category(
+        id: 'business',
+        name: 'Business',
+        icon: Icons.business_center,
+        count: 24,
+      ),
+      Category(
+        id: 'personal',
+        name: 'Personal',
+        icon: Icons.person,
+        count: 12,
+      ),
+      Category(
+        id: 'favorites',
+        name: 'Favorites',
+        icon: Icons.star,
+        count: 8,
+      ),
+      Category(
+        id: 'important',
+        name: 'Important',
+        icon: Icons.flag,
+        count: 15,
+      ),
+    ];
+
     _fetchTotalCards();
   }
 
   Future<void> _fetchTotalCards() async {
+    setState(() {
+      _isLoadingCards = true;
+    });
+
     try {
-      final userId = await UserSession.getUserId();
-      if (userId == null) {
-        print('User ID not found');
-        setState(() {
-          _isLoadingCards = false;
-        });
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
         return;
       }
 
       final response = await http.get(
-        Uri.parse('http://localhost:5001/cards/$userId'),
+        Uri.parse('https://smartstackapi.onrender.com/api/cards/total'),
         headers: {
+          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
@@ -56,710 +109,608 @@ class _HomePageState extends State<HomePage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          _totalCards = data['total_cards'] ?? 0;
-          _isLoadingCards = false;
+          _totalCards = data['total'] ?? 0;
         });
-      } else {
-        print('Failed to fetch cards: ${response.statusCode}');
-        setState(() {
-          _isLoadingCards = false;
-        });
+      } else if (response.statusCode == 401) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
       }
     } catch (e) {
       print('Error fetching total cards: $e');
+    } finally {
       setState(() {
         _isLoadingCards = false;
       });
     }
   }
 
+  void _onCategoryTap(String categoryId) {
+    switch (categoryId) {
+      case 'business':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const BusinessCardScreen(),
+          ),
+        );
+        break;
+      case 'personal':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PersonalCardScreen(),
+          ),
+        );
+        break;
+      case 'favorites':
+      case 'important':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OtherCardScreen(),
+          ),
+        );
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HomeScreen(
+      currentUserCard: currentUserCard,
+      totalCards: _totalCards,
+      categories: categories,
+      isCardFlipped: _isCardFlipped,
+      onFlipCard: () => setState(() => _isCardFlipped = !_isCardFlipped),
+      onCategoryTap: _onCategoryTap,
+    );
+  }
+}
+
+// Home Screen from design_reference.dart
+class HomeScreen extends StatelessWidget {
+  final BusinessCard currentUserCard;
+  final int totalCards;
+  final List<Category> categories;
+  final bool isCardFlipped;
+  final VoidCallback onFlipCard;
+  final Function(String) onCategoryTap;
+
+  const HomeScreen({
+    Key? key,
+    required this.currentUserCard,
+    required this.totalCards,
+    required this.categories,
+    required this.isCardFlipped,
+    required this.onFlipCard,
+    required this.onCategoryTap,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: _currentIndex == 0 ? _buildHomeContent() : _buildProfileContent(),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildHomeContent() {
-    return SafeArea(
-      child: SingleChildScrollView(
+      backgroundColor: Colors.white,
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Smart Stack',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Your digital card manager',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: IconButton(
-                            icon: Icon(Icons.search, color: Color(0xFF475569)),
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-                    // Stats Card
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Cards',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    _isLoadingCards ? '...' : '$_totalCards',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: EdgeInsets.all(16),
-                                child: Icon(
-                                  Icons.grid_view,
-                                  color: Colors.white,
-                                  size: 32,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'This Month',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '+3',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(width: 16),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Color(0xFF818CF8),
-                              ),
-                              SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Categories',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '4',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildFlipCard(),
+                    _buildCategories(),
                   ],
                 ),
               ),
             ),
-            SizedBox(height: 24),
-            // Quick Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CameraScannerPage(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Color(0xFF4F46E5),
-                        elevation: 2,
-                        padding: EdgeInsets.all(16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.camera_alt),
-                          SizedBox(width: 8),
-                          Text(
-                            'Scan Card',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF334155),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4F46E5),
-                      padding: EdgeInsets.all(16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Icon(Icons.add, size: 28),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 32),
-            // Categories
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                'Card Categories',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-            _buildCardCategories(),
-            SizedBox(height: 32),
-            // Recent Activity
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                'Recent Activity',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-            _buildRecentActivity(),
-            SizedBox(height: 24),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CameraScannerPage()),
+          );
+        },
+        backgroundColor: const Color(0xFF0F172A),
+        child: const Icon(Icons.camera_alt, size: 20),
       ),
     );
   }
 
-  Widget _buildCardCategories() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildCategoryCard(
-            title: 'Business Cards',
-            subtitle: '24 cards',
-            icon: Icons.business_center,
-            gradientColors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
-            ),
-          ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Personal',
-            subtitle: '12 cards',
-            icon: Icons.person,
-            gradientColors: [Color(0xFFA855F7), Color(0xFF9333EA)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const PersonalCardScreen()),
-            ),
-          ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Favorites',
-            subtitle: '8 cards',
-            icon: Icons.star,
-            gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const OtherCardScreen()),
-            ),
-          ),
-          SizedBox(height: 12),
-          _buildCategoryCard(
-            title: 'Important',
-            subtitle: '15 cards',
-            icon: Icons.flag,
-            gradientColors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradientColors,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        padding: EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradientColors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradientColors[0].withOpacity(0.4),
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: EdgeInsets.all(12),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    'Smart Stack',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w300,
                       color: Color(0xFF0F172A),
+                      letterSpacing: -0.5,
                     ),
                   ),
                   SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    'Digital Business Cards',
                     style: TextStyle(
                       fontSize: 14,
                       color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
-            ),
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 72, // Fixed width for the stack
-                    height: 32,
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                        Positioned(
-                          left: 20,
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFFC084FC), Color(0xFFA855F7)],
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 40,
-                          child: Container(
-                            width: 32,
-            height: 32,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Icon(
-                    Icons.chevron_right,
-                    color: Color(0xFF94A3B8),
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFFE2E8F0)),
-        ),
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildActivityItem(
-              'Added John Anderson',
-              '2h ago',
-              Color(0xFF10B981),
-            ),
-            Divider(height: 24, color: Color(0xFFF1F5F9)),
-            _buildActivityItem(
-              'Scanned 3 new cards',
-              '5h ago',
-              Color(0xFF3B82F6),
-            ),
-            Divider(height: 24, color: Color(0xFFF1F5F9)),
-            _buildActivityItem(
-              'Updated Business category',
-              '1d ago',
-              Color(0xFFF59E0B),
-              isLast: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(String text, String time, Color dotColor, {bool isLast = false}) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
-              children: [
-                TextSpan(text: text.split(' ')[0] + ' '),
-                TextSpan(
-                  text: text.substring(text.indexOf(' ') + 1),
-                  style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+              Container(
+                width: 40,
+                height: 40,
+                child: const Icon(
+                  Icons.more_vert,
+                  color: Color(0xFF475569),
+                  size: 20,
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Search Bar
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0).withOpacity(0.8),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search cards',
+                hintStyle: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 14,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Color(0xFF94A3B8),
+                  size: 18,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
             ),
           ),
-        ),
-        Text(
-          time,
-          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildProfileContent() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Profile',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-            SizedBox(height: 24),
-            Container(
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    widget.userName,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    widget.phoneNumber,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Debug current session state before logout
-                      await SessionDebugHelper.debugSessionState();
-                      
-                      // Force complete logout using debug helper
-                      await SessionDebugHelper.forceLogout();
-                      
-                      // Debug session state after logout
-                      await SessionDebugHelper.debugSessionState();
-                      
-                      if (mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginPage()),
-                          (route) => false, // Remove all previous routes
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFEF4444),
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _buildFlipCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFF1F5F9),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Transform.scale(
+        scale: 0.85,
+        child: AspectRatio(
+          aspectRatio: 1.76,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: isCardFlipped ? math.pi : 0),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOut,
+            builder: (context, value, child) {
+              final isUnder = value > math.pi / 2;
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateY(value),
+                child: isUnder
+                    ? Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()..rotateY(math.pi),
+                        child: _buildCardBack(),
+                      )
+                    : _buildCardFront(),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBottomNavigationBar() {
+  Widget _buildCardFront() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == 1) {
-            // Scan button - navigate to camera
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CameraScannerPage(),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Top Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CATEGORIES',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF94A3B8),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '4',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
-            );
-          } else {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF6366F1),
-        unselectedItemColor: const Color(0xFF9CA3AF),
-        elevation: 0,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'TOTAL CARDS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF94A3B8),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$totalCards',
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white,
-                size: 24,
-              ),
+          // Middle Section
+          Transform.translate(
+            offset: const Offset(0, -8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Hi ',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w300,
+                    color: const Color(0xFF94A3B8),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  currentUserCard.name.split(' ')[0],
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w300,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
             ),
-            label: 'Scan',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+          // Bottom Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Flexible(
+                child: Text(
+                  'Click here for your business card',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.w400,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              const SizedBox(width: 8),
+              BlinkingArrow(),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onFlipCard,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.credit_card,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCardBack() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Stack(
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Section
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              // Middle Section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentUserCard.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    currentUserCard.title,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: const Color(0xFFCBD5E1),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+              // Bottom Section
+              Text(
+                currentUserCard.company,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: onFlipCard,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    '×',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategories() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CATEGORIES',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF64748B),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...categories.map((category) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GestureDetector(
+                  onTap: () => onCategoryTap(category.id),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            category.icon,
+                            color: const Color(0xFF334155),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                category.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${category.count} ${category.count == 1 ? 'card' : 'cards'}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+// Blinking Arrow Widget
+class BlinkingArrow extends StatefulWidget {
+  const BlinkingArrow({Key? key}) : super(key: key);
+
+  @override
+  State<BlinkingArrow> createState() => _BlinkingArrowState();
+}
+
+class _BlinkingArrowState extends State<BlinkingArrow>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 1.0, end: 0.3).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: const Icon(
+        Icons.chevron_right,
+        color: Color(0xFF94A3B8),
+        size: 16,
       ),
     );
   }
