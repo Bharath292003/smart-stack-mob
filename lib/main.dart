@@ -102,10 +102,94 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.credit_card_rounded,
-                size: 60,
-                color: Colors.white,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Background cards stack effect
+                  Positioned(
+                    top: 25,
+                    left: 25,
+                    child: Container(
+                      width: 50,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 30,
+                    left: 30,
+                    child: Container(
+                      width: 50,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Front card
+                  Positioned(
+                    top: 35,
+                    left: 35,
+                    child: Container(
+                      width: 50,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            width: 16,
+                            height: 1.5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF64748B),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            width: 12,
+                            height: 1.5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF94A3B8),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 32),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'user_session.dart';
 import 'app_colors.dart';
+import 'models.dart';
 
 // Card Model
 class CardModel {
@@ -58,6 +60,8 @@ class CardModel {
   static Color _getColorByIndex(int index) {
     return AppColors.getBusinessColorByIndex(index);
   }
+
+
 }
 
 class CompactBusinessCard extends StatelessWidget {
@@ -242,18 +246,20 @@ class CompactBusinessCard extends StatelessWidget {
 
 class ExpandedCardDialog extends StatelessWidget {
   final CardModel card;
-  final VoidCallback onClose;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const ExpandedCardDialog({
     Key? key,
     required this.card,
-    required this.onClose,
+    this.onEdit,
+    this.onDelete,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onClose,
+      onTap: () => Navigator.of(context).pop(),
       child: Container(
         color: Colors.black.withOpacity(0.6),
         child: GestureDetector(
@@ -294,7 +300,7 @@ class ExpandedCardDialog extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: onClose,
+                          onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 36,
                             height: 36,
@@ -326,7 +332,7 @@ class ExpandedCardDialog extends StatelessWidget {
                         children: [
                           // Card Header - ATM Card Style
                           AspectRatio(
-                            aspectRatio: 1.586, // Standard ATM card ratio
+                            aspectRatio: 1.8, // Reduced from 1.586 for smaller height
                             child: Container(
                               decoration: BoxDecoration(
                                 color: card.color,
@@ -361,18 +367,73 @@ class ExpandedCardDialog extends StatelessWidget {
                                           size: 24,
                                         ),
                                       ),
-                                      Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.star_border,
-                                          color: Colors.white,
-                                          size: 18,
-                                        ),
+                                      Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () {
+                                              if (onEdit != null) {
+                                                Navigator.of(context).pop(); // Close current dialog first
+                                                onEdit!();
+                                              }
+                                            },
+                                            child: Container(
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(
+                                                Icons.edit,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (BuildContext context) {
+                                                  return AlertDialog(
+                                                    title: const Text('Delete Card'),
+                                                    content: Text('Are you sure you want to delete ${card.name}\'s card?'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                        child: const Text('Cancel'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () {
+                                                          Navigator.of(context).pop();
+                                                          Navigator.of(context).pop(); // Close the card dialog
+                                                          if (onDelete != null) {
+                                                            onDelete!();
+                                                          }
+                                                        },
+                                                        child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+                                            },
+                                            child: Container(
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -560,12 +621,13 @@ class ExpandedCardDialog extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                SelectableText(
                   value,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF0F172A),
                     fontWeight: FontWeight.w400,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ],
@@ -588,12 +650,256 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
   List<CardModel> _businessCards = [];
   bool _isLoading = true;
   int _totalCards = 0;
-  CardModel? _expandedCard;
+
+  Future<void> _moveCardToRecycleBin(CardModel card) async {
+    try {
+      // Convert CardModel to BusinessCard for recycle bin
+      final businessCard = BusinessCard(
+        id: int.tryParse(card.cardId) ?? 0,
+        name: card.name ?? '',
+        title: card.jobTitle ?? '',
+        company: card.company ?? '',
+        email: card.email ?? '',
+        phone: card.phone ?? '',
+        website: card.website ?? '',
+        location: card.address ?? '',
+        color: card.color,
+      );
+
+      // Save to deleted cards
+      final prefs = await SharedPreferences.getInstance();
+      final deletedCardsJson = prefs.getStringList('deleted_cards') ?? [];
+      deletedCardsJson.add(json.encode(businessCard.toJson()));
+      await prefs.setStringList('deleted_cards', deletedCardsJson);
+
+      // Remove from current cards list
+      setState(() {
+        _businessCards.removeWhere((c) => c.cardId == card.cardId);
+        _totalCards = _businessCards.length;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${card.name}\'s card moved to recycle bin'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () => _restoreCardFromRecycleBin(businessCard),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error moving card to recycle bin'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreCardFromRecycleBin(BusinessCard businessCard) async {
+    try {
+      // Convert BusinessCard back to CardModel
+      final cardModel = CardModel(
+        cardId: businessCard.id.toString(),
+        name: businessCard.name,
+        jobTitle: businessCard.title,
+        company: businessCard.company,
+        email: businessCard.email,
+        phone: businessCard.phone,
+        website: businessCard.website,
+        address: businessCard.location,
+        color: businessCard.color,
+      );
+
+      // Remove from deleted cards
+      final prefs = await SharedPreferences.getInstance();
+      final deletedCardsJson = prefs.getStringList('deleted_cards') ?? [];
+      deletedCardsJson.removeWhere((cardJson) {
+        final card = BusinessCard.fromJson(json.decode(cardJson));
+        return card.id == businessCard.id;
+      });
+      await prefs.setStringList('deleted_cards', deletedCardsJson);
+
+      // Add back to current cards list
+      setState(() {
+        _businessCards.add(cardModel);
+        _totalCards = _businessCards.length;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${businessCard.name}\'s card restored')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error restoring card'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _fetchBusinessCards();
+  }
+
+  void _showCardDetails(CardModel card) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
+        return ExpandedCardDialog(
+          card: card,
+          onEdit: () => _showEditDialog(card),
+          onDelete: () => _moveCardToRecycleBin(card),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 1.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          )),
+          child: child,
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(CardModel card) {
+    final nameController = TextEditingController(text: card.name);
+    final jobTitleController = TextEditingController(text: card.jobTitle);
+    final companyController = TextEditingController(text: card.company);
+    final emailController = TextEditingController(text: card.email);
+    final phoneController = TextEditingController(text: card.phone);
+    final websiteController = TextEditingController(text: card.website);
+    final addressController = TextEditingController(text: card.address);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Business Card'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: jobTitleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Job Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: companyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Company',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: websiteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Website',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Update the card with new values
+                final updatedCard = CardModel(
+                  cardId: card.cardId,
+                  name: nameController.text.trim().isEmpty ? null : nameController.text.trim(),
+                  jobTitle: jobTitleController.text.trim().isEmpty ? null : jobTitleController.text.trim(),
+                  company: companyController.text.trim().isEmpty ? null : companyController.text.trim(),
+                  email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                  phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                  website: websiteController.text.trim().isEmpty ? null : websiteController.text.trim(),
+                  address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                  color: card.color,
+                );
+
+                // Update the card in the list
+                setState(() {
+                  final index = _businessCards.indexWhere((c) => c.cardId == card.cardId);
+                  if (index != -1) {
+                    _businessCards[index] = updatedCard;
+                  }
+                });
+
+                Navigator.of(context).pop(); // Close edit dialog
+                Navigator.of(context).pop(); // Close card details dialog
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Card updated successfully')),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _fetchBusinessCards() async {
@@ -687,7 +993,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: CompactBusinessCard(
                                     card: cardWithColor,
-                                    onTap: () => setState(() => _expandedCard = cardWithColor),
+                                    onTap: () => _showCardDetails(cardWithColor),
                                   ),
                                 );
                               },
@@ -695,11 +1001,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                 ),
               ],
             ),
-            if (_expandedCard != null)
-              ExpandedCardDialog(
-                card: _expandedCard!,
-                onClose: () => setState(() => _expandedCard = null),
-              ),
+
           ],
         ),
       ),

@@ -23,6 +23,36 @@ class BusinessCard {
     required this.location,
     required this.color,
   });
+
+  // Convert BusinessCard to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'title': title,
+      'company': company,
+      'email': email,
+      'phone': phone,
+      'website': website,
+      'location': location,
+      'color': color.value,
+    };
+  }
+
+  // Create BusinessCard from JSON
+  factory BusinessCard.fromJson(Map<String, dynamic> json) {
+    return BusinessCard(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      title: json['title'] ?? '',
+      company: json['company'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      website: json['website'] ?? '',
+      location: json['location'] ?? '',
+      color: Color(json['color'] ?? Colors.blue.value),
+    );
+  }
 }
 
 class Category {

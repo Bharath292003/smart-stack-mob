@@ -5,6 +5,7 @@ import 'login_page.dart';
 import 'app_colors.dart';
 import 'card_details_screen.dart';
 import 'preferences_screen.dart';
+import 'recycle_bin_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -136,6 +137,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const PreferencesScreen(),
+      ),
+    );
+  }
+
+  void _navigateToRecycleBin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const RecycleBinScreen(),
       ),
     );
   }
@@ -274,6 +284,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Privacy & Security',
                               subtitle: 'Manage your privacy settings',
                               onTap: () => _showComingSoonSnackBar('Privacy Settings'),
+                            ),
+                            _buildActionTile(
+                              icon: Icons.delete_outline,
+                              title: 'Recycle Bin',
+                              subtitle: 'View and restore deleted cards',
+                              onTap: () => _navigateToRecycleBin(),
                             ),
                           ],
                         ),
