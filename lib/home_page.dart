@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'dart:math' as math;
 import 'login_page.dart';
@@ -10,9 +13,10 @@ import 'business_card_screen.dart';
 import 'personal_card_screen.dart';
 import 'other_card_screen.dart';
 import 'profile_screen.dart';
+import 'models.dart';
 import 'user_session.dart';
 import 'session_debug_helper.dart';
-import 'models.dart';
+import 'api_helper.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -349,39 +353,223 @@ class HomeScreen extends StatelessWidget {
 
   void _pickImageFromGallery(BuildContext context) async {
     try {
-      final ImagePicker imagePicker = ImagePicker();
-      final XFile? image = await imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      
-      if (image != null) {
-        // Show success message
+      if (kIsWeb) {
+        // Use file_picker for web compatibility
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+        );
+        
+        if (result != null && result.files.single.bytes != null) {
+          final fileBytes = result.files.single.bytes!;
+          final fileName = result.files.single.name;
+          
+          print('Image selected: $fileName');
+          print('File size: ${fileBytes.length} bytes');
+          
+          // Show loading indicator
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: const [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Text('Processing image...'),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF0F172A),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                duration: const Duration(seconds: 30), // Long duration for processing
+              ),
+            );
+          }
+          
+          try {
+            // Send image to backend for processing
+            final response = await ApiHelper.uploadImageForCardExtraction(
+              fileBytes,
+              fileName,
+            );
+            
+            if (context.mounted) {
+              // Clear the loading snackbar
+              ScaffoldMessenger.of(context).clearSnackBars();
+              
+              if (response.statusCode == 200) {
+                final responseData = json.decode(response.body);
+                print('Card extraction successful: $responseData');
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Card processed successfully!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              } else {
+                print('Card extraction failed: ${response.statusCode} - ${response.body}');
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Processing failed: ${response.statusCode}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              }
+            }
+          } catch (apiError) {
+            print('API Error: $apiError');
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Network error: $apiError'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            }
+          }
+        }
+      } else {
+        // Use image_picker for mobile platforms
+        final ImagePicker imagePicker = ImagePicker();
+        final XFile? image = await imagePicker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 80,
+        );
+        
+        if (image != null) {
+          print('Image selected: ${image.path}');
+          
+          // Show loading indicator
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: const [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Text('Processing image...'),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF0F172A),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                duration: const Duration(seconds: 30), // Long duration for processing
+              ),
+            );
+          }
+          
+          try {
+            // Read image bytes for mobile
+            final imageBytes = await image.readAsBytes();
+            final fileName = image.name;
+            
+            // Send image to backend for processing
+            final response = await ApiHelper.uploadImageForCardExtraction(
+              imageBytes,
+              fileName,
+            );
+            
+            if (context.mounted) {
+              // Clear the loading snackbar
+              ScaffoldMessenger.of(context).clearSnackBars();
+              
+              if (response.statusCode == 200) {
+                final responseData = json.decode(response.body);
+                print('Card extraction successful: $responseData');
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Card processed successfully!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              } else {
+                print('Card extraction failed: ${response.statusCode} - ${response.body}');
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Processing failed: ${response.statusCode}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              }
+            }
+          } catch (apiError) {
+            print('API Error: $apiError');
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Network error: $apiError'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Check if context is still mounted before showing error snackbar
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Image selected successfully!'),
-            backgroundColor: const Color(0xFF0F172A),
+            content: Text('Error selecting image: $e'),
+            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
         );
-        
-        // Here you can process the image or navigate to a processing screen
-        // For now, we'll just show the success message
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error selecting image: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
+      print('Error selecting image: $e');
     }
   }
 

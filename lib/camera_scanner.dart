@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
+import 'api_helper.dart';
 
 class CameraScannerPage extends StatefulWidget {
   const CameraScannerPage({super.key});
@@ -129,17 +133,126 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
 
   Future<void> _pickFromGallery() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      
-      if (image != null) {
-        _showTopRightAlert('Image selected from gallery!');
+      if (kIsWeb) {
+        // Use file_picker for web compatibility
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+        );
         
-        // Navigate back with the selected image path
-        if (mounted) {
-          Navigator.pop(context, image.path);
+        if (result != null && result.files.single.bytes != null) {
+          final fileBytes = result.files.single.bytes!;
+          final fileName = result.files.single.name;
+          
+          _showTopRightAlert('Processing image...');
+          
+          try {
+            // Send image to backend for processing
+            final response = await ApiHelper.uploadImageForCardExtraction(
+              fileBytes,
+              fileName,
+            );
+            
+            if (response.statusCode == 200) {
+              final responseData = json.decode(response.body);
+              _showTopRightAlert('Card processed successfully!');
+              
+              // Navigate back with success and response data
+              if (mounted) {
+                Navigator.pop(context, {
+                  'success': true,
+                  'data': responseData,
+                  'bytes': fileBytes,
+                  'name': fileName,
+                  'path': fileName,
+                });
+              }
+            } else {
+              _showTopRightAlert('Processing failed: ${response.statusCode}');
+              
+              // Navigate back with error info
+              if (mounted) {
+                Navigator.pop(context, {
+                  'success': false,
+                  'error': 'Processing failed: ${response.statusCode}',
+                  'bytes': fileBytes,
+                  'name': fileName,
+                  'path': fileName,
+                });
+              }
+            }
+          } catch (apiError) {
+            _showTopRightAlert('Network error: $apiError');
+            
+            // Navigate back with error info
+            if (mounted) {
+              Navigator.pop(context, {
+                'success': false,
+                'error': 'Network error: $apiError',
+                'bytes': fileBytes,
+                'name': fileName,
+                'path': fileName,
+              });
+            }
+          }
+        }
+      } else {
+        // Use image_picker for mobile platforms
+        final XFile? image = await _imagePicker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 80,
+        );
+        
+        if (image != null) {
+          _showTopRightAlert('Processing image...');
+          
+          try {
+            // Read image bytes for mobile
+            final imageBytes = await image.readAsBytes();
+            final fileName = image.name;
+            
+            // Send image to backend for processing
+            final response = await ApiHelper.uploadImageForCardExtraction(
+              imageBytes,
+              fileName,
+            );
+            
+            if (response.statusCode == 200) {
+              final responseData = json.decode(response.body);
+              _showTopRightAlert('Card processed successfully!');
+              
+              // Navigate back with success and response data
+              if (mounted) {
+                Navigator.pop(context, {
+                  'success': true,
+                  'data': responseData,
+                  'path': image.path,
+                });
+              }
+            } else {
+              _showTopRightAlert('Processing failed: ${response.statusCode}');
+              
+              // Navigate back with error info
+              if (mounted) {
+                Navigator.pop(context, {
+                  'success': false,
+                  'error': 'Processing failed: ${response.statusCode}',
+                  'path': image.path,
+                });
+              }
+            }
+          } catch (apiError) {
+            _showTopRightAlert('Network error: $apiError');
+            
+            // Navigate back with error info
+            if (mounted) {
+              Navigator.pop(context, {
+                'success': false,
+                'error': 'Network error: $apiError',
+                'path': image.path,
+              });
+            }
+          }
         }
       }
     } catch (e) {

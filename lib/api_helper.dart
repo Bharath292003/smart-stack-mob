@@ -107,4 +107,39 @@ class ApiHelper {
     final userId = await UserSession.getUserId();
     return userId != null && userId.isNotEmpty;
   }
+
+  /// Upload image file to extract-card endpoint
+  static Future<http.Response> uploadImageForCardExtraction(
+    List<int> imageBytes,
+    String fileName,
+  ) async {
+    final userId = await UserSession.getUserId();
+    
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/extract-card'),
+    );
+
+    // Add user_id to the request
+    request.fields['user_id'] = userId;
+
+    // Add the image file
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image', // field name expected by the backend
+        imageBytes,
+        filename: fileName,
+      ),
+    );
+
+    // Send the request
+    var streamedResponse = await request.send();
+    
+    // Convert streamed response to regular response
+    return await http.Response.fromStream(streamedResponse);
+  }
 }
