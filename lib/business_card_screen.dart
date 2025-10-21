@@ -266,15 +266,17 @@ class ExpandedCardDialog extends StatelessWidget {
           onTap: () {}, // Prevent closing when tapping dialog
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
                 ),
-              ),
               child: Column(
                 children: [
                   // Header
@@ -331,8 +333,8 @@ class ExpandedCardDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Card Header - ATM Card Style
-                          AspectRatio(
-                            aspectRatio: 1.8, // Reduced from 1.586 for smaller height
+                          Container(
+                            height: 200, // Fixed height instead of AspectRatio
                             child: Container(
                               decoration: BoxDecoration(
                                 color: card.color,
@@ -573,6 +575,7 @@ class ExpandedCardDialog extends StatelessWidget {
                   ),
                 ],
               ),
+              ),
             ),
           ),
         ),
@@ -795,19 +798,20 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Business Card'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
+        return Material(
+          child: AlertDialog(
+            title: const Text('Edit Business Card'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: jobTitleController,
@@ -897,7 +901,8 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
               child: const Text('Save'),
             ),
           ],
-        );
+        ),
+      );
       },
     );
   }

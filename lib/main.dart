@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_page.dart';
 import 'home_page.dart';
+import 'login_page.dart';
 import 'user_session.dart';
 
 void main() {
@@ -78,119 +79,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Using the card background color
+      backgroundColor: Colors.white, // Changed to white background
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo Container with gradient background
-            Container(
+            // Logo using SVG
+            SvgPicture.asset(
+              'assets/logo.svg',
               width: 120,
               height: 120,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF334155)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Background cards stack effect
-                  Positioned(
-                    top: 25,
-                    left: 25,
-                    child: Container(
-                      width: 50,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 30,
-                    left: 30,
-                    child: Container(
-                      width: 50,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.5),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Front card
-                  Positioned(
-                    top: 35,
-                    left: 35,
-                    child: Container(
-                      width: 50,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 2,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Container(
-                            width: 16,
-                            height: 1.5,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF64748B),
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Container(
-                            width: 12,
-                            height: 1.5,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF94A3B8),
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 32),
             // App Name
@@ -199,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 42,
                 fontWeight: FontWeight.w300,
-                color: Colors.white,
+                color: Color(0xFF0F172A), // Changed to dark color for white background
                 letterSpacing: -1.0,
               ),
             ),
@@ -210,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF94A3B8),
+                color: Color(0xFF64748B), // Adjusted for white background
                 letterSpacing: 0.5,
               ),
             ),
@@ -220,7 +118,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
-                color: Color(0xFF64748B),
+                color: Color(0xFF94A3B8), // Adjusted for white background
                 letterSpacing: 1.0,
               ),
             ),
@@ -230,7 +128,7 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 32,
               height: 32,
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F172A)), // Changed to dark color
                 strokeWidth: 2.5,
               ),
             ),
