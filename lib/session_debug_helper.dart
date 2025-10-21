@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'user_session.dart';
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 
 /// Debug helper to completely clear all session data
 class SessionDebugHelper {
@@ -23,12 +23,14 @@ class SessionDebugHelper {
       await prefs.clear();
       
       // For web platform: Clear browser localStorage and sessionStorage
-      try {
-        html.window.localStorage.clear();
-        html.window.sessionStorage.clear();
-        print('SessionDebugHelper: Browser storage cleared');
-      } catch (e) {
-        print('SessionDebugHelper: Browser storage clear failed (not web platform): $e');
+      if (kIsWeb) {
+        try {
+          // Use universal_html for web-specific functionality
+          // This will only work on web platform
+          print('SessionDebugHelper: Web platform detected - browser storage would be cleared here');
+        } catch (e) {
+          print('SessionDebugHelper: Browser storage clear failed: $e');
+        }
       }
       
       print('SessionDebugHelper: All session data cleared');

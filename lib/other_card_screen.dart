@@ -79,7 +79,7 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://localhost:5001/cards/$userId'),
+        Uri.parse('http://34.93.230.130:5001/cards/$userId'),
         headers: {'Content-Type': 'application/json'},
       );
 
