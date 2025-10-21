@@ -32,16 +32,70 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _totalCards = 0;
   bool _isLoadingCards = false;
   bool _isCardFlipped = false;
   late BusinessCard currentUserCard;
   late List<Category> categories;
+  
+  // Image processing state variables
+  bool _isProcessingImage = false;
+  bool _isProcessingComplete = false;
+  double _processingProgress = 0.0;
+  String? _processingError;
+  Map<String, dynamic>? _extractedCardData;
+  
+  // Animation controllers
+  late AnimationController _rotationController;
+  late AnimationController _progressController;
+  late AnimationController _checkmarkController;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _progressAnimation;
+  late Animation<double> _checkmarkAnimation;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize animation controllers
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    _progressController = AnimationController(
+      duration: const Duration(seconds: 7),
+      vsync: this,
+    );
+    _checkmarkController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    // Initialize animations
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+    
+    _progressAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _progressController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _checkmarkAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _checkmarkController,
+      curve: Curves.elasticOut,
+    ));
     
     // Initialize current user card with actual user data
     currentUserCard = BusinessCard(
@@ -85,6 +139,14 @@ class _HomePageState extends State<HomePage> {
     ];
 
     _fetchTotalCards();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    _progressController.dispose();
+    _checkmarkController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchTotalCards() async {
@@ -170,71 +232,52 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return HomeScreen(
-      currentUserCard: currentUserCard,
-      totalCards: _totalCards,
-      categories: categories,
-      isCardFlipped: _isCardFlipped,
-      onFlipCard: () => setState(() => _isCardFlipped = !_isCardFlipped),
-      onCategoryTap: _onCategoryTap,
-      onProfileTap: _onProfileTap,
-    );
-  }
-}
-
-// Home Screen from design_reference.dart
-class HomeScreen extends StatelessWidget {
-  final BusinessCard currentUserCard;
-  final int totalCards;
-  final List<Category> categories;
-  final bool isCardFlipped;
-  final VoidCallback onFlipCard;
-  final Function(String) onCategoryTap;
-  final VoidCallback onProfileTap;
-
-  const HomeScreen({
-    Key? key,
-    required this.currentUserCard,
-    required this.totalCards,
-    required this.categories,
-    required this.isCardFlipped,
-    required this.onFlipCard,
-    required this.onCategoryTap,
-    required this.onProfileTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildFlipCard(),
-                    _buildCategories(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCameraOptions(context),
-        backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-      ),
+  void _navigateToBusinessCards() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
     );
   }
 
-  void _showCameraOptions(BuildContext context) {
+  void _startImageProcessing() {
+    setState(() {
+      _isProcessingImage = true;
+      _isProcessingComplete = false;
+      _processingError = null;
+      _processingProgress = 0.0;
+    });
+    
+    // Start animations
+    _rotationController.repeat();
+    _progressController.forward();
+  }
+
+  void _onProcessingSuccess(Map<String, dynamic> data) {
+    setState(() {
+      _isProcessingImage = false;
+      _isProcessingComplete = true;
+      _extractedCardData = data;
+    });
+    
+    // Stop rotation and start checkmark animation
+    _rotationController.stop();
+    _progressController.stop();
+    _checkmarkController.forward();
+  }
+
+  void _onProcessingError(String error) {
+    setState(() {
+      _isProcessingImage = false;
+      _isProcessingComplete = false;
+      _processingError = error;
+    });
+    
+    // Stop animations
+    _rotationController.stop();
+    _progressController.stop();
+  }
+
+  void _showCameraOptions() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -340,7 +383,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImageFromGallery(context);
+                  _pickImageFromGallery();
                 },
               ),
               const SizedBox(height: 20),
@@ -351,7 +394,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _pickImageFromGallery(BuildContext context) async {
+  void _pickImageFromGallery() async {
     try {
       if (kIsWeb) {
         // Use file_picker for web compatibility
@@ -367,33 +410,8 @@ class HomeScreen extends StatelessWidget {
           print('Image selected: $fileName');
           print('File size: ${fileBytes.length} bytes');
           
-          // Show loading indicator
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: const [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Text('Processing image...'),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF0F172A),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                duration: const Duration(seconds: 30), // Long duration for processing
-              ),
-            );
-          }
+          // Start processing UI
+          _startImageProcessing();
           
           try {
             // Send image to backend for processing
@@ -402,55 +420,17 @@ class HomeScreen extends StatelessWidget {
               fileName,
             );
             
-            if (context.mounted) {
-              // Clear the loading snackbar
-              ScaffoldMessenger.of(context).clearSnackBars();
-              
-              if (response.statusCode == 200) {
-                final responseData = json.decode(response.body);
-                print('Card extraction successful: $responseData');
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Card processed successfully!'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              } else {
-                print('Card extraction failed: ${response.statusCode} - ${response.body}');
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Processing failed: ${response.statusCode}'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              }
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+              final responseData = json.decode(response.body);
+              print('Card extraction successful: $responseData');
+              _onProcessingSuccess(responseData);
+            } else {
+              print('Card extraction failed: ${response.statusCode} - ${response.body}');
+              _onProcessingError('Processing failed: ${response.statusCode}');
             }
           } catch (apiError) {
             print('API Error: $apiError');
-            
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Network error: $apiError'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              );
-            }
+            _onProcessingError('Network error: $apiError');
           }
         }
       } else {
@@ -464,33 +444,8 @@ class HomeScreen extends StatelessWidget {
         if (image != null) {
           print('Image selected: ${image.path}');
           
-          // Show loading indicator
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: const [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Text('Processing image...'),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF0F172A),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                duration: const Duration(seconds: 30), // Long duration for processing
-              ),
-            );
-          }
+          // Start processing UI
+          _startImageProcessing();
           
           try {
             // Read image bytes for mobile
@@ -503,74 +458,54 @@ class HomeScreen extends StatelessWidget {
               fileName,
             );
             
-            if (context.mounted) {
-              // Clear the loading snackbar
-              ScaffoldMessenger.of(context).clearSnackBars();
-              
-              if (response.statusCode == 200) {
-                final responseData = json.decode(response.body);
-                print('Card extraction successful: $responseData');
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Card processed successfully!'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              } else {
-                print('Card extraction failed: ${response.statusCode} - ${response.body}');
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Processing failed: ${response.statusCode}'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              }
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+              final responseData = json.decode(response.body);
+              print('Card extraction successful: $responseData');
+              _onProcessingSuccess(responseData);
+            } else {
+              print('Card extraction failed: ${response.statusCode} - ${response.body}');
+              _onProcessingError('Processing failed: ${response.statusCode}');
             }
           } catch (apiError) {
             print('API Error: $apiError');
-            
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Network error: $apiError'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              );
-            }
+            _onProcessingError('Network error: $apiError');
           }
         }
       }
     } catch (e) {
-      // Check if context is still mounted before showing error snackbar
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error selecting image: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-      }
       print('Error selecting image: $e');
+      _onProcessingError('Error selecting image: $e');
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildFlipCard(),
+                    _buildProcessingSection(),
+                    _buildCategories(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCameraOptions,
+        backgroundColor: const Color(0xFF0F172A),
+        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+      ),
+    );
   }
 
   Widget _buildHeader() {
@@ -625,7 +560,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 child: IconButton(
-                   onPressed: onProfileTap,
+                   onPressed: _onProfileTap,
                    icon: const Icon(
                      Icons.person_outline,
                      color: Color(0xFF475569),
@@ -688,7 +623,7 @@ class HomeScreen extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: 1.76,
           child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: isCardFlipped ? math.pi : 0),
+            tween: Tween<double>(begin: 0, end: _isCardFlipped ? math.pi : 0),
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeInOut,
             builder: (context, value, child) {
@@ -772,7 +707,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$totalCards',
+                    '$_totalCards',
                     style: const TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w300,
@@ -830,7 +765,7 @@ class HomeScreen extends StatelessWidget {
               BlinkingArrow(),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: onFlipCard,
+                onTap: () => setState(() => _isCardFlipped = !_isCardFlipped),
                 child: Container(
                   width: 48,
                   height: 48,
@@ -925,23 +860,18 @@ class HomeScreen extends StatelessWidget {
             top: 16,
             right: 16,
             child: GestureDetector(
-              onTap: onFlipCard,
+              onTap: () => setState(() => _isCardFlipped = !_isCardFlipped),
               child: Container(
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Center(
-                  child: Text(
-                    '×',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w300,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: const Icon(
+                  Icons.flip_to_front,
+                  color: Colors.white,
+                  size: 16,
                 ),
               ),
             ),
@@ -952,95 +882,318 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildCategories() {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'CATEGORIES',
+          const Text(
+            'Categories',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF64748B),
-              letterSpacing: 0.8,
+              color: Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 16),
-          ...categories.map((category) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: GestureDetector(
-                  onTap: () => onCategoryTap(category.id),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return GestureDetector(
+                onTap: () => _onCategoryTap(category.id),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1,
                     ),
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            category.icon,
-                            color: const Color(0xFF334155),
-                            size: 20,
-                          ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                category.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${category.count} ${category.count == 1 ? 'card' : 'cards'}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFF94A3B8),
+                        child: Icon(
+                          category.icon,
+                          color: const Color(0xFF0F172A),
                           size: 20,
                         ),
-                      ],
-                    ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        category.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${category.count} cards',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessingSection() {
+    if (!_isProcessingImage && !_isProcessingComplete && _processingError == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (_isProcessingImage) ...[
+            // Processing state
+            AnimatedBuilder(
+              animation: _rotationAnimation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _rotationAnimation.value * 2 * math.pi,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: Color(0xFF0F172A),
+                      size: 30,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'AI is working its magic ✨',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Extracting card details in a few seconds...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            AnimatedBuilder(
+              animation: _progressAnimation,
+              builder: (context, child) {
+                return Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: _progressAnimation.value,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F172A)),
+                      minHeight: 6,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${(_progressAnimation.value * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ] else if (_isProcessingComplete) ...[
+            // Success state
+            AnimatedBuilder(
+              animation: _checkmarkAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _checkmarkAnimation.value,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 30,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Process Completed! ✅',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your business card has been successfully processed',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _navigateToBusinessCards,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Check Results',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (_processingError != null) ...[
+            // Error state
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Processing Failed',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _processingError!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isProcessingImage = false;
+                    _isProcessingComplete = false;
+                    _processingError = null;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-// Blinking Arrow Widget
 class BlinkingArrow extends StatefulWidget {
-  const BlinkingArrow({Key? key}) : super(key: key);
-
   @override
   State<BlinkingArrow> createState() => _BlinkingArrowState();
 }
@@ -1054,10 +1207,17 @@ class _BlinkingArrowState extends State<BlinkingArrow>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 1.0, end: 0.3).animate(_controller);
+    );
+    _animation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+    _controller.repeat(reverse: true);
   }
 
   @override
@@ -1068,13 +1228,18 @@ class _BlinkingArrowState extends State<BlinkingArrow>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _animation,
-      child: const Icon(
-        Icons.chevron_right,
-        color: Color(0xFF94A3B8),
-        size: 16,
-      ),
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _animation.value,
+          child: const Icon(
+            Icons.arrow_forward,
+            color: Color(0xFFCBD5E1),
+            size: 16,
+          ),
+        );
+      },
     );
   }
 }
