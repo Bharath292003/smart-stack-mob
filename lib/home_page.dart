@@ -13,6 +13,7 @@ import 'business_card_screen.dart';
 import 'personal_card_screen.dart';
 import 'other_card_screen.dart';
 import 'profile_screen.dart';
+import 'card_details_screen.dart';
 import 'models.dart';
 import 'user_session.dart';
 import 'session_debug_helper.dart';
@@ -886,9 +887,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 GestureDetector(
                   onTap: () {
-                    // TODO: Implement edit functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit functionality coming soon!')),
+                    // Navigate to card details screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CardDetailsScreen(),
+                      ),
                     );
                   },
                   child: Container(

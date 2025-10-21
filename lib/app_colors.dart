@@ -67,4 +67,9 @@ class AppColors {
     return businessCardColors[
         DateTime.now().millisecondsSinceEpoch % businessCardColors.length];
   }
+  
+  // Red colors for logout button (muted red tones)
+  static const Color red600 = Color(0xFFDC2626);
+  static const Color red700 = Color(0xFFB91C1C);
+  static const Color red800 = Color(0xFF991B1B);
 }

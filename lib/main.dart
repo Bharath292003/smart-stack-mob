@@ -78,36 +78,77 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF6C63FF),
-      body: const Center(
+      backgroundColor: const Color(0xFF0F172A), // Using the card background color
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.credit_card,
-              size: 100,
-              color: Colors.white,
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Smart-Stack',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
+            // Logo Container with gradient background
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E293B), Color(0xFF334155)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.credit_card_rounded,
+                size: 60,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 10),
-            Text(
-              'Digital Business Card Manager',
+            const SizedBox(height: 32),
+            // App Name
+            const Text(
+              'Smart-Stack',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
+                fontSize: 42,
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                letterSpacing: -1.0,
               ),
             ),
-            SizedBox(height: 50),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            const SizedBox(height: 12),
+            // Slogan
+            const Text(
+              'Your Digital Business Card Manager',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF94A3B8),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Connect • Share • Grow',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w300,
+                color: Color(0xFF64748B),
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 60),
+            // Loading indicator
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 2.5,
+              ),
             ),
           ],
         ),
