@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow all HTTPS connections -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- For development: Allow HTTP to localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    
+    <!-- For production: Allow your cloud API IP address -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">34.93.230.130</domain>
+    </domain-config>
+    
+    <!-- For production: Allow your cloud API domain -->
+    <!-- If your API uses HTTPS, remove this section -->
+    <!-- If your API uses HTTP, add your domain here -->
+    <!-- <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">smartstackapi.onrender.com</domain>
+    </domain-config> -->
+</network-security-config>

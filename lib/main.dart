@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'home_page.dart';
 import 'user_session.dart';
+import 'app_colors.dart';
 
 void main() {
   runApp(const SmartStackApp());
@@ -78,36 +79,151 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF6C63FF),
-      body: const Center(
+      backgroundColor: AppColors.slate50,
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.credit_card,
-              size: 100,
-              color: Colors.white,
+            // Stacked Cards Logo (same as login page)
+            SizedBox(
+              height: 160,
+              width: 200,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Back card 1 (furthest back)
+                  Positioned(
+                    top: 4,
+                    left: 16,
+                    child: Transform.rotate(
+                      angle: -0.12,
+                      child: Container(
+                        width: 176,
+                        height: 128,
+                        decoration: BoxDecoration(
+                          color: AppColors.slate700.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Back card 2 (middle)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Transform.rotate(
+                      angle: -0.06,
+                      child: Container(
+                        width: 176,
+                        height: 128,
+                        decoration: BoxDecoration(
+                          color: AppColors.slate800.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Main card (front)
+                  Positioned(
+                    top: 16,
+                    left: 12,
+                    child: Container(
+                      width: 176,
+                      height: 128,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 96,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: 128,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: 80,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: 112,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 32),
             Text(
-              'Smart-Stack',
+              'Smart Stack',
               style: TextStyle(
                 fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontWeight: FontWeight.w300,
+                color: AppColors.primaryDark,
+                letterSpacing: -0.5,
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(
-              'Digital Business Card Manager',
+              'Your Digital Card Collection',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
+                fontSize: 14,
+                color: AppColors.slate500,
+                fontWeight: FontWeight.w400,
               ),
             ),
-            SizedBox(height: 50),
+            const SizedBox(height: 50),
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryDark),
             ),
           ],
         ),
