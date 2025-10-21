@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkLoginStatus() async {
     await Future.delayed(const Duration(seconds: 2)); // Splash screen delay
-    
+
     // Use UserSession for consistent session management
     final isLoggedIn = await UserSession.isLoggedIn();
     final userName = await UserSession.getUserName() ?? '';
@@ -58,18 +58,14 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(
-              userName: userName,
-              phoneNumber: phoneNumber,
-            ),
+            builder: (context) =>
+                HomePage(userName: userName, phoneNumber: phoneNumber),
           ),
         );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
-          ),
+          MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
     }
@@ -83,11 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.credit_card,
-              size: 100,
-              color: Colors.white,
-            ),
+            Icon(Icons.credit_card, size: 100, color: Colors.white),
             SizedBox(height: 20),
             Text(
               'Smart-Stack',
@@ -100,10 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
             SizedBox(height: 10),
             Text(
               'Digital Business Card Manager',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
             SizedBox(height: 50),
             CircularProgressIndicator(
