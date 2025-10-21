@@ -89,10 +89,10 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-
-      if (token == null) {
+      // Get user ID from UserSession
+      final userId = await UserSession.getUserId();
+      
+      if (userId == null) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -101,9 +101,8 @@ class _HomePageState extends State<HomePage> {
       }
 
       final response = await http.get(
-        Uri.parse('https://smartstackapi.onrender.com/api/cards/total'),
+        Uri.parse('http://localhost:5001/cards/$userId'),
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
@@ -111,7 +110,7 @@ class _HomePageState extends State<HomePage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          _totalCards = data['total'] ?? 0;
+          _totalCards = data['total_cards'] ?? 0;
         });
       } else if (response.statusCode == 401) {
         Navigator.pushReplacement(
