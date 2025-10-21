@@ -149,6 +149,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> _refreshData() async {
+    // Refresh all data on the home screen
+    await _fetchTotalCards();
+    
+    // Reset any processing states
+    setState(() {
+      _isProcessingImage = false;
+      _isProcessingComplete = false;
+      _processingError = null;
+      _processingProgress = 0.0;
+      _extractedCardData = null;
+    });
+    
+    // Stop any running animations
+    _rotationController.stop();
+    _progressController.reset();
+    _checkmarkController.reset();
+  }
+
   Future<void> _fetchTotalCards() async {
     setState(() {
       _isLoadingCards = true;
@@ -344,12 +363,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color: Color(0xFF64748B),
                   ),
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const CameraScannerPage()),
                   );
+                  
+                  // Handle the result from camera scanner
+                  if (result != null && result is Map<String, dynamic>) {
+                    if (result['success'] == true) {
+                      // Start processing UI immediately
+                      _startImageProcessing();
+                      
+                      try {
+                        // Process the image data on home screen
+                        final imageBytes = result['imageBytes'];
+                        final fileName = result['fileName'];
+                        
+                        final response = await ApiHelper.uploadImageForCardExtraction(
+                          imageBytes,
+                          fileName,
+                        );
+                        
+                        if (response.statusCode >= 200 && response.statusCode < 300) {
+                          final responseData = json.decode(response.body);
+                          _onProcessingSuccess(responseData);
+                        } else {
+                          _onProcessingError('Processing failed: ${response.statusCode}');
+                        }
+                      } catch (apiError) {
+                        _onProcessingError('Network error: $apiError');
+                      }
+                    } else {
+                      // Handle error case
+                      _onProcessingError(result['error'] ?? 'Unknown error occurred');
+                    }
+                  }
                 },
               ),
               ListTile(
@@ -487,13 +537,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           children: [
             _buildHeader(),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildFlipCard(),
-                    _buildProcessingSection(),
-                    _buildCategories(),
-                  ],
+              child: RefreshIndicator(
+                onRefresh: _refreshData,
+                color: const Color(0xFF0F172A),
+                backgroundColor: Colors.white,
+                strokeWidth: 2.5,
+                displacement: 40.0,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      _buildFlipCard(),
+                      _buildProcessingSection(),
+                      _buildCategories(),
+                    ],
+                  ),
                 ),
               ),
             ),

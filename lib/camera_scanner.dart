@@ -119,14 +119,29 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
     if (_cameraController != null && _cameraController!.value.isInitialized) {
       try {
         final XFile picture = await _cameraController!.takePicture();
-        _showTopRightAlert('Photo captured successfully!');
         
-        // Navigate back with the captured image path
+        // Read image bytes from the captured photo
+        final imageBytes = await picture.readAsBytes();
+        final fileName = picture.name;
+        
+        // Navigate back immediately with the image data for processing on home screen
         if (mounted) {
-          Navigator.pop(context, picture.path);
+          Navigator.pop(context, {
+            'success': true,
+            'imageBytes': imageBytes,
+            'fileName': fileName,
+            'path': picture.path,
+          });
         }
       } catch (e) {
         _showTopRightAlert('Error taking picture: $e');
+        // Navigate back with error
+        if (mounted) {
+          Navigator.pop(context, {
+            'success': false,
+            'error': 'Error taking picture: $e',
+          });
+        }
       }
     }
   }
