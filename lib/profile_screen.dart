@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'user_session.dart';
 import 'login_page.dart';
 import 'app_colors.dart';
 import 'home_page.dart';
 import 'camera_scanner.dart';
+import 'theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -95,6 +97,200 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     }
+  }
+
+  void _showHelpAndSupportOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Help & Support',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildHelpMenuItem(
+                icon: Icons.help_center,
+                title: 'FAQ',
+                subtitle: 'Frequently asked questions',
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Navigate to FAQ
+                },
+              ),
+              _buildHelpMenuItem(
+                icon: Icons.contact_support,
+                title: 'Contact Support',
+                subtitle: 'Get in touch with our support team',
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Navigate to contact support
+                },
+              ),
+              _buildHelpMenuItem(
+                icon: Icons.feedback,
+                title: 'Send Feedback',
+                subtitle: 'Share your thoughts and suggestions',
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Navigate to feedback
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHelpMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: Color(0xFF94A3B8),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String time,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          time,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF94A3B8),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ],
+    );
   }
 
   void _onBottomNavTap(int index) {
@@ -244,14 +440,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const SizedBox(width: 20),
                                 _buildActionButton(
-                                  icon: Icons.settings,
-                                  label: 'Settings',
-                                  onTap: () {
-                                    // TODO: Navigate to settings
-                                  },
-                                ),
-                                const SizedBox(width: 20),
-                                _buildActionButton(
                                   icon: Icons.share,
                                   label: 'Share',
                                   onTap: () {
@@ -273,81 +461,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        // Stats Section
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF0F172A).withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                            border: Border.all(
-                              color: const Color(0xFFE2E8F0),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Quick Stats',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildStatItem(
-                                      icon: Icons.business_center,
-                                      value: '12',
-                                      label: 'Business Cards',
-                                      color: const Color(0xFF6C63FF),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 1,
-                                    height: 40,
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
-                                  Expanded(
-                                    child: _buildStatItem(
-                                      icon: Icons.person,
-                                      value: '8',
-                                      label: 'Personal Cards',
-                                      color: const Color(0xFF10B981),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 1,
-                                    height: 40,
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
-                                  Expanded(
-                                    child: _buildStatItem(
-                                      icon: Icons.category,
-                                      value: '5',
-                                      label: 'Other Cards',
-                                      color: const Color(0xFFF59E0B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
                         // Account Details Section
                         Container(
                           width: double.infinity,
@@ -402,6 +515,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         
                         const SizedBox(height: 20),
                         
+                        // Recent Activity Section
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A).withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.history,
+                                    size: 20,
+                                    color: Color(0xFF6C63FF),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Recent Activity',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildActivityItem(
+                                icon: Icons.add_circle_outline,
+                                title: 'Card Added',
+                                subtitle: 'Business card scanned successfully',
+                                time: '2 hours ago',
+                                color: const Color(0xFF10B981),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildActivityItem(
+                                icon: Icons.share_outlined,
+                                title: 'Profile Shared',
+                                subtitle: 'Shared with John Doe',
+                                time: '1 day ago',
+                                color: const Color(0xFF6C63FF),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildActivityItem(
+                                icon: Icons.edit_outlined,
+                                title: 'Profile Updated',
+                                subtitle: 'Contact information modified',
+                                time: '3 days ago',
+                                color: const Color(0xFFF59E0B),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
                         // Menu Items Section
                         Container(
                           width: double.infinity,
@@ -426,8 +609,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 icon: Icons.help_outline,
                                 title: 'Help & Support',
                                 subtitle: 'Get help and contact support',
-                                onTap: () {},
+                                onTap: () {
+                                  _showHelpAndSupportOptions();
+                                },
                               ),
+                              _buildDivider(),
+                              _buildThemeToggleItem(),
                               _buildDivider(),
                               _buildMenuItem(
                                 icon: Icons.privacy_tip_outlined,
@@ -660,6 +847,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildThemeToggleItem() {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: themeProvider.isDarkMode 
+                      ? const Color(0xFF334155) 
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: themeProvider.isDarkMode 
+                        ? const Color(0xFF475569) 
+                        : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  size: 20,
+                  color: themeProvider.isDarkMode 
+                      ? const Color(0xFFF59E0B) 
+                      : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Theme',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: themeProvider.isDarkMode 
+                            ? const Color(0xFFF1F5F9) 
+                            : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: themeProvider.isDarkMode 
+                            ? const Color(0xFF94A3B8) 
+                            : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: themeProvider.isDarkMode,
+                onChanged: (value) {
+                  themeProvider.toggleTheme();
+                },
+                activeColor: const Color(0xFF3B82F6),
+                activeTrackColor: const Color(0xFF3B82F6).withOpacity(0.3),
+                inactiveThumbColor: const Color(0xFF94A3B8),
+                inactiveTrackColor: const Color(0xFFE2E8F0),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
