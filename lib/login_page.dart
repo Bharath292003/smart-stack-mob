@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'home_page.dart';
 import 'signup_page.dart';
 import 'user_session.dart';
+import 'api_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -33,15 +34,12 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       try {
-        final response = await http.post(
-          Uri.parse('http://34.93.230.130:5001/login'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: json.encode({
+        final response = await ApiHelper.post(
+          '/login',
+          body: {
             'phone': _phoneController.text,
             'password': _passwordController.text,
-          }),
+          },
         );
 
         if (response.statusCode == 200) {
@@ -103,12 +101,25 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
       } catch (e) {
-        // Network error
+        // Network error with better error handling
+        String errorMessage = 'Network error occurred';
+        
+        if (e.toString().contains('SocketException') || 
+            e.toString().contains('Connection failed') ||
+            e.toString().contains('Operation not permitted')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
+        } else if (e.toString().contains('TimeoutException')) {
+          errorMessage = 'Connection timeout. Please try again.';
+        } else if (e.toString().contains('FormatException')) {
+          errorMessage = 'Server response error. Please try again later.';
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Network error: $e'),
+              content: Text(errorMessage),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
