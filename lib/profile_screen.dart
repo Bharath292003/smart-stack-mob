@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'user_session.dart';
 import 'login_page.dart';
 import 'app_colors.dart';
+import 'trash_bin_screen.dart';
+import 'models.dart';
+import 'my_card_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -36,6 +40,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _navigateToMyCard() async {
+    try {
+      // Load current user card data from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final cardDataJson = prefs.getString('user_card_data');
+      
+      // Create a default card if none exists
+      BusinessCard currentUserCard;
+      if (cardDataJson != null) {
+        final cardData = json.decode(cardDataJson);
+        // Create BusinessCard from saved data (simplified approach)
+        currentUserCard = BusinessCard(
+          id: 1,
+          name: cardData['name'] ?? userName ?? 'Your Name',
+          title: cardData['title'] ?? 'Your Title',
+          company: cardData['company'] ?? 'Your Company',
+          email: cardData['email'] ?? '',
+          phone: cardData['phone'] ?? userPhone ?? '',
+          website: cardData['website'] ?? '',
+          location: cardData['location'] ?? '',
+          color: const Color(0xFF3B82F6),
+        );
+      } else {
+        // Create default card with user's basic info
+        currentUserCard = BusinessCard(
+          id: 1,
+          name: userName ?? 'Your Name',
+          title: 'Your Title',
+          company: 'Your Company',
+          email: '',
+          phone: userPhone ?? '',
+          website: '',
+          location: '',
+          color: const Color(0xFF3B82F6),
+        );
+      }
+
+      // Navigate to My Card screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => MyCardScreen(
+            currentUserCard: currentUserCard,
+            onCardUpdated: (updatedCard) {
+              // Save updated card data
+              _saveUserCardData(updatedCard);
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening My Card: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveUserCardData(BusinessCard card) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cardData = {
+        'name': card.name,
+        'title': card.title,
+        'company': card.company,
+        'email': card.email,
+        'phone': card.phone,
+        'website': card.website,
+        'location': card.location,
+      };
+      final cardDataJson = json.encode(cardData);
+      await prefs.setString('user_card_data', cardDataJson);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving card data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -227,6 +319,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   const SizedBox(height: 40),
                   
+                  // Utils Section
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Utils',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        _buildUtilRow(
+                          icon: Icons.credit_card_outlined,
+                          label: 'My Card',
+                          subtitle: 'Customize your business card',
+                          onTap: _navigateToMyCard,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        _buildUtilRow(
+                          icon: Icons.delete_outline,
+                          label: 'Trash Bin',
+                          subtitle: 'View deleted cards',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const TrashBinScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
                   // Logout Button
                   SizedBox(
                     width: double.infinity,
@@ -326,6 +470,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildUtilRow({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: Color(0xFF64748B),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

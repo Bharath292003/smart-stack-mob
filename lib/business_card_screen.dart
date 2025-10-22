@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'user_session.dart';
 import 'app_colors.dart';
+import 'api_helper.dart';
 
 // Card Model
 class CardModel {
@@ -63,11 +66,13 @@ class CardModel {
 class CompactBusinessCard extends StatelessWidget {
   final CardModel card;
   final VoidCallback onTap;
+  final Function(CardModel) onShare;
 
   const CompactBusinessCard({
     Key? key,
     required this.card,
     required this.onTap,
+    required this.onShare,
   }) : super(key: key);
 
   @override
@@ -214,17 +219,20 @@ class CompactBusinessCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.share,
-                            color: Colors.white,
-                            size: 16,
+                        GestureDetector(
+                          onTap: () => onShare(card),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.share,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ],
@@ -243,12 +251,279 @@ class CompactBusinessCard extends StatelessWidget {
 class ExpandedCardDialog extends StatelessWidget {
   final CardModel card;
   final VoidCallback onClose;
+  final Function(String) onDelete;
+  final Function(CardModel) onShare;
 
   const ExpandedCardDialog({
     Key? key,
     required this.card,
     required this.onClose,
+    required this.onDelete,
+    required this.onShare,
   }) : super(key: key);
+
+  void _showDeleteConfirmation(BuildContext context, CardModel card) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Card'),
+          content: const Text('Are you sure you want to delete this business card?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDelete(card.cardId);
+              },
+              child: const Text('Yes', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper methods for launching external apps
+  Future<void> _launchPhone(BuildContext context, String phoneNumber) async {
+    // Check if phone number contains multiple numbers (separated by commas or semicolons)
+    List<String> phoneNumbers = phoneNumber.split(RegExp(r'[,;]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    
+    if (phoneNumbers.length > 1) {
+      // Show selection dialog for multiple numbers
+      String? selectedNumber = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Phone Number'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: phoneNumbers.map((number) {
+                return ListTile(
+                  leading: const Icon(Icons.phone),
+                  title: Text(number),
+                  onTap: () => Navigator.of(context).pop(number),
+                );
+              }).toList(),
+            ),
+          );
+        },
+      );
+      
+      if (selectedNumber != null) {
+        await _makePhoneCall(context, selectedNumber);
+      }
+    } else {
+      // Single number, launch directly
+      await _makePhoneCall(context, phoneNumbers.first);
+    }
+  }
+
+  Future<void> _launchMaps(BuildContext context, String address) async {
+    try {
+      // Clean and encode the address for URL
+      String encodedAddress = Uri.encodeComponent(address.trim());
+      
+      // Try different map URL schemes with fallbacks
+      List<String> mapUrls = [
+        'https://maps.google.com/maps?q=$encodedAddress', // Google Maps web
+        'geo:0,0?q=$encodedAddress', // Generic geo intent
+        'maps:?q=$encodedAddress', // Apple Maps
+      ];
+      
+      bool launched = false;
+      
+      for (String urlString in mapUrls) {
+        try {
+          final Uri mapUri = Uri.parse(urlString);
+          if (await canLaunchUrl(mapUri)) {
+            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+            launched = true;
+            break;
+          }
+        } catch (e) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      
+      if (!launched) {
+        // Fallback: try platform default mode
+        final Uri fallbackUri = Uri.parse('https://maps.google.com/maps?q=$encodedAddress');
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri, mode: LaunchMode.platformDefault);
+          launched = true;
+        }
+      }
+      
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open maps for: $address')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error opening maps')),
+        );
+      }
+    }
+  }
+
+  Future<void> _makePhoneCall(BuildContext context, String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch phone dialer')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchEmail(BuildContext context, String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try with different URI format
+        final String emailUrl = 'mailto:$email';
+        final Uri fallbackUri = Uri.parse(emailUrl);
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('No email app available');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch email app. Please check if you have an email app installed.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWebsite(BuildContext context, String website) async {
+    String url = website.trim();
+    
+    // Clean and format the URL
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+    
+    try {
+      final Uri websiteUri = Uri.parse(url);
+      if (await canLaunchUrl(websiteUri)) {
+        await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Try with platform default mode
+        await launchUrl(websiteUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open website: $url. Please check your internet connection.')),
+        );
+      }
+    }
+  }
+
+  Widget _buildInfoItem(BuildContext context, IconData icon, String label, String value, {VoidCallback? onTap}) {
+    VoidCallback? actualOnTap;
+    
+    // Set up appropriate onTap handlers based on the label
+    if (label.toLowerCase() == 'email' && value.isNotEmpty) {
+      actualOnTap = () => _launchEmail(context, value);
+    } else if (label.toLowerCase() == 'phone' && value.isNotEmpty) {
+      actualOnTap = () => _launchPhone(context, value);
+    } else if (label.toLowerCase() == 'website' && value.isNotEmpty) {
+      actualOnTap = () => _launchWebsite(context, value);
+    } else if (label.toLowerCase() == 'location' && value.isNotEmpty) {
+      actualOnTap = () => _launchMaps(context, value);
+    } else {
+      actualOnTap = onTap;
+    }
+    
+    return GestureDetector(
+      onTap: actualOnTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: actualOnTap != null ? Border.all(
+            color: const Color(0xFFE2E8F0),
+            width: 1,
+          ) : null,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: actualOnTap != null ? const Color(0xFF3B82F6) : const Color(0xFF475569),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: actualOnTap != null ? const Color(0xFF3B82F6) : const Color(0xFF0F172A),
+                      fontWeight: FontWeight.w400,
+                      decoration: actualOnTap != null ? TextDecoration.underline : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (actualOnTap != null)
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Color(0xFF64748B),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -326,7 +601,7 @@ class ExpandedCardDialog extends StatelessWidget {
                         children: [
                           // Card Header - ATM Card Style
                           AspectRatio(
-                            aspectRatio: 1.586, // Standard ATM card ratio
+                            aspectRatio: 1.586 * 1.15, // Reduced height by 15% (increased aspect ratio)
                             child: Container(
                               decoration: BoxDecoration(
                                 color: card.color,
@@ -361,18 +636,56 @@ class ExpandedCardDialog extends StatelessWidget {
                                           size: 24,
                                         ),
                                       ),
-                                      Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.star_border,
-                                          color: Colors.white,
-                                          size: 18,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.15),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () => onShare(card),
+                                            child: Container(
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(
+                                                Icons.share,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () => _showDeleteConfirmation(context, card),
+                                            child: Container(
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -451,16 +764,16 @@ class ExpandedCardDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           if (card.email != null)
-                            _buildInfoItem(Icons.email_outlined, 'Email', card.email!),
+                            _buildInfoItem(context, Icons.email_outlined, 'Email', card.email!),
                           if (card.email != null) const SizedBox(height: 16),
                           if (card.phone != null)
-                            _buildInfoItem(Icons.phone_outlined, 'Phone', card.phone!),
+                            _buildInfoItem(context, Icons.phone_outlined, 'Phone', card.phone!),
                           if (card.phone != null) const SizedBox(height: 16),
                           if (card.website != null)
-                            _buildInfoItem(Icons.language, 'Website', card.website!),
+                            _buildInfoItem(context, Icons.language, 'Website', card.website!),
                           if (card.website != null) const SizedBox(height: 16),
                           if (card.address != null)
-                            _buildInfoItem(Icons.location_on_outlined, 'Location', card.address!),
+                            _buildInfoItem(context, Icons.location_on_outlined, 'Location', card.address!),
                           const SizedBox(height: 32),
                           // Action Buttons
                           Row(
@@ -518,63 +831,6 @@ class ExpandedCardDialog extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildInfoItem(IconData icon, String label, String value) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(
-                color: const Color(0xFFE2E8F0),
-                width: 1,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF475569),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF0F172A),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class BusinessCardScreen extends StatefulWidget {
@@ -594,6 +850,185 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
   void initState() {
     super.initState();
     _fetchBusinessCards();
+  }
+
+  // Helper methods for launching external apps
+  Future<void> _launchPhone(String phoneNumber) async {
+    // Check if phone number contains multiple numbers (separated by commas or semicolons)
+    List<String> phoneNumbers = phoneNumber.split(RegExp(r'[,;]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    
+    if (phoneNumbers.length > 1) {
+      // Show selection dialog for multiple numbers
+      String? selectedNumber = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Phone Number'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: phoneNumbers.map((number) {
+                return ListTile(
+                  leading: const Icon(Icons.phone),
+                  title: Text(number),
+                  onTap: () => Navigator.of(context).pop(number),
+                );
+              }).toList(),
+            ),
+          );
+        },
+      );
+      
+      if (selectedNumber != null) {
+        await _makePhoneCall(selectedNumber);
+      }
+    } else {
+      // Single number, launch directly
+      await _makePhoneCall(phoneNumbers.first);
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch phone dialer')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch email app')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWebsite(String website) async {
+    String url = website;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+    
+    final Uri websiteUri = Uri.parse(url);
+    if (await canLaunchUrl(websiteUri)) {
+      await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch website')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchMaps(String address) async {
+    try {
+      // Clean and encode the address for URL
+      String encodedAddress = Uri.encodeComponent(address.trim());
+      
+      // Try different map URL schemes with fallbacks
+      List<String> mapUrls = [
+        'https://maps.google.com/maps?q=$encodedAddress', // Google Maps web
+        'geo:0,0?q=$encodedAddress', // Generic geo intent
+        'maps:?q=$encodedAddress', // Apple Maps
+      ];
+      
+      bool launched = false;
+      
+      for (String urlString in mapUrls) {
+        try {
+          final Uri mapUri = Uri.parse(urlString);
+          if (await canLaunchUrl(mapUri)) {
+            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+            launched = true;
+            break;
+          }
+        } catch (e) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      
+      if (!launched) {
+        // Fallback: try platform default mode
+        final Uri fallbackUri = Uri.parse('https://maps.google.com/maps?q=$encodedAddress');
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri, mode: LaunchMode.platformDefault);
+          launched = true;
+        }
+      }
+      
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open maps for: $address')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error opening maps')),
+        );
+      }
+    }
+  }
+
+  // Share card functionality
+  void _shareCard(CardModel card) {
+    String cardInfo = '';
+    
+    // Add name and title
+    if (card.name != null && card.name!.isNotEmpty) {
+      cardInfo += '${card.name}';
+      if (card.jobTitle != null && card.jobTitle!.isNotEmpty) {
+        cardInfo += '\n${card.jobTitle}';
+      }
+    }
+    
+    // Add company
+    if (card.company != null && card.company!.isNotEmpty) {
+      cardInfo += '\n${card.company}';
+    }
+    
+    // Add contact information
+    if (card.email != null && card.email!.isNotEmpty) {
+      cardInfo += '\n📧 ${card.email}';
+    }
+    
+    if (card.phone != null && card.phone!.isNotEmpty) {
+      cardInfo += '\n📞 ${card.phone}';
+    }
+    
+    if (card.website != null && card.website!.isNotEmpty) {
+      cardInfo += '\n🌐 ${card.website}';
+    }
+    
+    if (card.address != null && card.address!.isNotEmpty) {
+      cardInfo += '\n📍 ${card.address}';
+    }
+    
+    // Add additional info if available
+    if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty) {
+      cardInfo += '\n\n${card.additionalInfo}';
+    }
+    
+    // Add footer
+    cardInfo += '\n\nShared via Smart Stack';
+    
+    // Share the formatted card information
+    Share.share(
+      cardInfo,
+      subject: 'Business Card - ${card.name ?? 'Contact'}',
+    );
   }
 
   Future<void> _fetchBusinessCards() async {
@@ -645,6 +1080,65 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
     }
   }
 
+  Future<void> _deleteCard(String cardId) async {
+    try {
+      final userId = await UserSession.getUserId();
+      if (userId == null) {
+        print('User ID not found');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('http://34.93.230.130:5001/delete_card'),
+        headers: {
+          'Content-Type': 'application/json',
+          'user_id': userId,
+        },
+        body: json.encode({'card_id': cardId}),
+      );
+
+      if (response.statusCode == 200) {
+        // Close the expanded dialog
+        setState(() {
+          _expandedCard = null;
+        });
+        
+        // Refresh the business cards list
+        await _fetchBusinessCards();
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Business card deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete business card'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error deleting card: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error deleting business card'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -688,6 +1182,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                                   child: CompactBusinessCard(
                                     card: cardWithColor,
                                     onTap: () => setState(() => _expandedCard = cardWithColor),
+                                    onShare: _shareCard,
                                   ),
                                 );
                               },
@@ -696,17 +1191,33 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
               ],
             ),
             if (_expandedCard != null)
-              ExpandedCardDialog(
-                card: _expandedCard!,
-                onClose: () => setState(() => _expandedCard = null),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 600),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.0, 1.0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    )),
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                child: ExpandedCardDialog(
+                  key: ValueKey(_expandedCard!.cardId),
+                  card: _expandedCard!,
+                  onClose: () => setState(() => _expandedCard = null),
+                  onDelete: _deleteCard,
+                  onShare: _shareCard,
+                ),
               ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.add, size: 20),
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'user_session.dart';
 import 'app_colors.dart';
 
@@ -528,14 +530,31 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
   }
 
   void _shareCard(OtherCardModel card) {
-    String cardInfo = 'Card: ${card.title ?? 'Unknown'}';
+    String cardInfo = '';
+    
+    // Add title/name
+    if (card.title != null && card.title!.isNotEmpty) {
+      cardInfo += '${card.title}';
+    }
+    
+    // Add type
     if (card.type != null && card.type!.isNotEmpty) {
       cardInfo += '\nType: ${card.type}';
     }
+    
+    // Add card ID if available
     if (card.cardId != null && card.cardId!.isNotEmpty) {
       cardInfo += '\nID: ${card.cardId}';
     }
-    _showTopRightAlert('Sharing card: ${card.title ?? 'Unknown'}');
+    
+    // Add footer
+    cardInfo += '\n\nShared via Smart Stack';
+    
+    // Share the formatted card information
+    Share.share(
+      cardInfo,
+      subject: 'Card - ${card.title ?? 'Other Card'}',
+    );
   }
 }
 

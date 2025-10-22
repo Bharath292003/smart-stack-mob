@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'user_session.dart';
 import 'app_colors.dart';
 
@@ -735,13 +737,43 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
   }
 
   void _shareCard(PersonalCardModel card) {
-    String cardInfo = 'Contact: ${card.name ?? 'Unknown'}';
+    String cardInfo = '';
+    
+    // Add name
+    if (card.name != null && card.name!.isNotEmpty) {
+      cardInfo += '${card.name}';
+    }
+    
+    // Add relationship
+    if (card.relationship != null && card.relationship!.isNotEmpty) {
+      cardInfo += '\n${card.relationship}';
+    }
+    
+    // Add contact information
     if (card.phone != null && card.phone!.isNotEmpty) {
-      cardInfo += '\nPhone: ${card.phone}';
+      cardInfo += '\n📞 ${card.phone}';
     }
+    
     if (card.email != null && card.email!.isNotEmpty) {
-      cardInfo += '\nEmail: ${card.email}';
+      cardInfo += '\n📧 ${card.email}';
     }
-    _showTopRightAlert('Sharing card: ${card.name ?? 'Unknown'}');
+    
+    if (card.address != null && card.address!.isNotEmpty) {
+      cardInfo += '\n📍 ${card.address}';
+    }
+    
+    // Add notes if available
+    if (card.notes != null && card.notes!.isNotEmpty) {
+      cardInfo += '\n\nNotes: ${card.notes}';
+    }
+    
+    // Add footer
+    cardInfo += '\n\nShared via Smart Stack';
+    
+    // Share the formatted card information
+    Share.share(
+      cardInfo,
+      subject: 'Personal Contact - ${card.name ?? 'Contact'}',
+    );
   }
 }

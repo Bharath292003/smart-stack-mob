@@ -17,6 +17,7 @@ import 'models.dart';
 import 'user_session.dart';
 import 'session_debug_helper.dart';
 import 'api_helper.dart';
+import 'my_card_screen.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -68,7 +69,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       vsync: this,
     );
     _progressController = AnimationController(
-      duration: const Duration(seconds: 7),
+      duration: const Duration(seconds: 15),
       vsync: this,
     );
     _checkmarkController = AnimationController(
@@ -102,17 +103,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     ));
     
     // Initialize current user card with actual user data
-    currentUserCard = BusinessCard(
-      id: 0,
-      name: widget.userName,
-      title: 'Your Title',
-      company: 'Your Company',
-      email: 'your.email@example.com',
-      phone: widget.phoneNumber ?? 'Your Phone',
-      website: 'www.yourwebsite.com',
-      location: 'Your Location',
-      color: const Color(0xFF0F172A),
-    );
+    _loadUserCard();
 
     // Initialize categories
     categories = [
@@ -261,6 +252,98 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (context) => const BusinessCardScreen()),
     );
+  }
+
+  Future<void> _loadUserCard() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cardDataJson = prefs.getString('user_card_data');
+      
+      if (cardDataJson != null) {
+        final cardData = json.decode(cardDataJson);
+        setState(() {
+          currentUserCard = BusinessCard(
+            id: 0,
+            name: cardData['name'] ?? widget.userName,
+            title: cardData['title'] ?? 'Your Title',
+            company: cardData['company'] ?? 'Your Company',
+            email: cardData['email'] ?? 'your.email@example.com',
+            phone: cardData['phone'] ?? widget.phoneNumber ?? 'Your Phone',
+            website: cardData['website'] ?? 'www.yourwebsite.com',
+            location: cardData['location'] ?? 'Your Location',
+            color: const Color(0xFF0F172A),
+          );
+        });
+      } else {
+        // Initialize with default values if no saved data
+        setState(() {
+          currentUserCard = BusinessCard(
+            id: 0,
+            name: widget.userName,
+            title: 'Your Title',
+            company: 'Your Company',
+            email: 'your.email@example.com',
+            phone: widget.phoneNumber ?? 'Your Phone',
+            website: 'www.yourwebsite.com',
+            location: 'Your Location',
+            color: const Color(0xFF0F172A),
+          );
+        });
+      }
+    } catch (e) {
+      // Fallback to default values on error
+      setState(() {
+        currentUserCard = BusinessCard(
+          id: 0,
+          name: widget.userName,
+          title: 'Your Title',
+          company: 'Your Company',
+          email: 'your.email@example.com',
+          phone: widget.phoneNumber ?? 'Your Phone',
+          website: 'www.yourwebsite.com',
+          location: 'Your Location',
+          color: const Color(0xFF0F172A),
+        );
+      });
+    }
+  }
+
+  void _navigateToMyCard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MyCardScreen(
+          currentUserCard: currentUserCard,
+          onCardUpdated: (updatedCard) {
+            setState(() {
+              currentUserCard = updatedCard;
+            });
+            // Save updated card data to SharedPreferences
+            _saveUserCardData(updatedCard);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveUserCardData(BusinessCard card) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cardData = {
+        'name': card.name,
+        'title': card.title,
+        'company': card.company,
+        'email': card.email,
+        'phone': card.phone,
+        'website': card.website,
+        'location': card.location,
+      };
+      final cardDataJson = json.encode(cardData);
+      await prefs.setString('user_card_data', cardDataJson);
+    } catch (e) {
+      // Handle error silently or show a snackbar if needed
+      print('Error saving user card data: $e');
+    }
   }
 
   void _startImageProcessing() {
@@ -1107,21 +1190,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Positioned(
             top: 16,
             right: 16,
-            child: GestureDetector(
-              onTap: () => setState(() => _isCardFlipped = !_isCardFlipped),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: _navigateToMyCard,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.flip_to_front,
-                  color: Colors.white,
-                  size: 16,
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => setState(() => _isCardFlipped = !_isCardFlipped),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.flip_to_front,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
