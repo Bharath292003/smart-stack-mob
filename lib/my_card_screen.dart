@@ -32,6 +32,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
   late TextEditingController _aboutController;
 
   bool _isLoading = false;
+  bool _isEditMode = false;
 
   @override
   void initState() {
@@ -142,6 +143,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
     } finally {
       setState(() {
         _isLoading = false;
+        _isEditMode = false; // Exit edit mode after saving
       });
     }
   }
@@ -183,23 +185,52 @@ class _MyCardScreenState extends State<MyCardScreen> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveCardData,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text(
-                    'Save',
-                    style: TextStyle(
-                      color: Color(0xFF6366F1),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+          if (!_isEditMode)
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _isEditMode = true;
+                });
+              },
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFF6366F1),
+              ),
+            )
+          else ...[
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isEditMode = false;
+                });
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : _saveCardData,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: Color(0xFF6366F1),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-          ),
+            ),
+          ],
           const SizedBox(width: 16),
         ],
       ),
@@ -455,6 +486,8 @@ class _MyCardScreenState extends State<MyCardScreen> {
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        enabled: _isEditMode, // Only enable when in edit mode
+        readOnly: !_isEditMode, // Make read-only when not in edit mode
         onChanged: (value) {
           setState(() {}); // Trigger rebuild to update preview
         },
@@ -466,10 +499,10 @@ class _MyCardScreenState extends State<MyCardScreen> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: _isEditMode ? Colors.white : const Color(0xFFF8FAFC), // Different background when read-only
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          labelStyle: const TextStyle(
-            color: Color(0xFF6B7280),
+          labelStyle: TextStyle(
+            color: _isEditMode ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
             fontSize: 14,
           ),
         ),

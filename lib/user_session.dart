@@ -35,6 +35,12 @@ class UserSession {
     return _prefs!.getString('user_phone');
   }
 
+  /// Get the current user's email
+  static Future<String?> getUserEmail() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!.getString('user_email');
+  }
+
   /// Check if user is logged in
   static Future<bool> isLoggedIn() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -46,6 +52,7 @@ class UserSession {
     required String userId,
     required String phone,
     String? userName,
+    String? userEmail,
   }) async {
     _prefs ??= await SharedPreferences.getInstance();
     await _prefs!.setString('user_id', userId);
@@ -55,6 +62,10 @@ class UserSession {
     if (userName != null && userName.isNotEmpty) {
       await _prefs!.setString('user_name', userName);
     }
+    
+    if (userEmail != null && userEmail.isNotEmpty) {
+      await _prefs!.setString('user_email', userEmail);
+    }
   }
 
   /// Clear all user data (for logout)
@@ -63,6 +74,7 @@ class UserSession {
     await _prefs!.remove('user_id');
     await _prefs!.remove('user_name');
     await _prefs!.remove('user_phone');
+    await _prefs!.remove('user_email');
     await _prefs!.setBool('is_logged_in', false);
   }
 
@@ -72,6 +84,7 @@ class UserSession {
       'user_id': await getUserId(),
       'user_name': await getUserName(),
       'user_phone': await getUserPhone(),
+      'user_email': await getUserEmail(),
     };
   }
 }

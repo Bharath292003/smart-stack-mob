@@ -950,7 +950,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       ),
       child: Transform.scale(
-        scale: 0.85,
+        scale: 0.95,
         child: AspectRatio(
           aspectRatio: 1.76,
           child: TweenAnimationBuilder<double>(

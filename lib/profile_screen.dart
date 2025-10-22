@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_session.dart';
 import 'login_page.dart';
@@ -8,6 +9,7 @@ import 'trash_bin_screen.dart';
 import 'models.dart';
 import 'my_card_screen.dart';
 import 'categories_screen.dart';
+import 'preferences_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -19,7 +21,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String? userName;
   String? userPhone;
-  String? userId;
+  String? userEmail;
   bool isLoading = true;
 
   @override
@@ -28,19 +30,303 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
+  void _editProfile() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final nameController = TextEditingController(text: userName ?? '');
+        final phoneController = TextEditingController(text: userPhone ?? '');
+        final emailController = TextEditingController(text: userEmail ?? '');
+        
+        return AlertDialog(
+          title: const Text('Edit Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Update the user data
+                setState(() {
+                  userName = nameController.text.trim();
+                  userPhone = phoneController.text.trim();
+                  userEmail = emailController.text.trim();
+                });
+                
+                // Save to SharedPreferences
+                await _saveUserData();
+                
+                Navigator.of(context).pop();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showHelpSupport() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Help & Support',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+              
+              // Support options
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    _buildSupportOption(
+                      icon: Icons.email_outlined,
+                      title: 'Contact Support',
+                      subtitle: 'Send us an email for assistance',
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Opening email client...'),
+                            backgroundColor: Color(0xFF3B82F6),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    _buildSupportOption(
+                      icon: Icons.help_outline,
+                      title: 'FAQ',
+                      subtitle: 'Find answers to common questions',
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('FAQ coming soon'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    _buildSupportOption(
+                      icon: Icons.bug_report_outlined,
+                      title: 'Report a Bug',
+                      subtitle: 'Let us know about any issues',
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Bug report form coming soon'),
+                            backgroundColor: Color(0xFFF59E0B),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[200]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: const Color(0xFF3B82F6),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Color(0xFF64748B),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (userName != null) await prefs.setString('user_name', userName!);
+    if (userPhone != null) await prefs.setString('user_phone', userPhone!);
+    if (userEmail != null) await prefs.setString('user_email', userEmail!);
+  }
+
+  void _loadUserData() async {
     try {
       final userData = await UserSession.getUserData();
+      
       setState(() {
         userName = userData['user_name'] ?? 'Unknown User';
         userPhone = userData['user_phone'] ?? 'No phone number';
-        userId = userData['user_id'] ?? 'No ID';
+        userEmail = userData['user_email'] ?? 'No email';
         isLoading = false;
       });
+      
+      // Load card statistics separately
+      await _loadCardStatistics();
     } catch (e) {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadCardStatistics() async {
+    try {
+      final userId = await UserSession.getUserId();
+      if (userId == null) return;
+
+      final response = await http.get(
+        Uri.parse('http://34.93.230.130:5001/cards/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> cardsData = data['cards'] ?? [];
+        
+        // Count unique categories
+        final categories = <String>{};
+        for (var card in cardsData) {
+          if (card['card_type'] != null && card['card_type'].toString().isNotEmpty) {
+            categories.add(card['card_type'].toString());
+          }
+        }
+        
+        // No need to set statistics since we removed the app statistics section
+      }
+    } catch (e) {
+      print('Error loading card statistics: $e');
     }
   }
 
@@ -239,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   
                   // User Name
                   Text(
@@ -253,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textAlign: TextAlign.center,
                   ),
                   
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   
                   // User Phone
                   Text(
@@ -266,7 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textAlign: TextAlign.center,
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
                   
                   // Profile Details Card
                   Container(
@@ -283,15 +569,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Account Details',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F172A),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Account Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _editProfile,
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                size: 16,
+                                color: Color(0xFF3B82F6),
+                              ),
+                              label: const Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF3B82F6),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         
                         _buildDetailRow(
                           icon: Icons.person_outline,
@@ -299,7 +611,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           value: userName ?? 'Unknown User',
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
                         _buildDetailRow(
                           icon: Icons.phone_outlined,
@@ -307,18 +619,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           value: userPhone ?? 'No phone number',
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
                         _buildDetailRow(
-                          icon: Icons.badge_outlined,
-                          label: 'User ID',
-                          value: userId ?? 'No ID',
+                          icon: Icons.email_outlined,
+                          label: 'Email',
+                          value: userEmail ?? 'No email',
                         ),
                       ],
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
                   
                   // Utils Section
                   Container(
@@ -343,7 +655,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: Color(0xFF0F172A),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         
                         _buildUtilRow(
                           icon: Icons.credit_card_outlined,
@@ -352,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: _navigateToMyCard,
                         ),
                         
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         
                         _buildUtilRow(
                           icon: Icons.category_outlined,
@@ -367,7 +679,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
                         
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         
                         _buildUtilRow(
                           icon: Icons.delete_outline,
@@ -377,6 +689,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => const TrashBinScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Settings Section
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        _buildUtilRow(
+                          icon: Icons.settings_outlined,
+                          label: 'Preferences',
+                          subtitle: 'Theme, notifications, language',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const PreferencesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        
+                        const SizedBox(height: 8),
+                        
+                        _buildUtilRow(
+                          icon: Icons.help_outline,
+                          label: 'Help & Support',
+                          subtitle: 'Get help and contact support',
+                          onTap: () {
+                            _showHelpSupport();
+                          },
+                        ),
+                        
+                        const SizedBox(height: 8),
+                        
+                        _buildUtilRow(
+                          icon: Icons.info_outline,
+                          label: 'About',
+                          subtitle: 'App version and information',
+                          onTap: () {
+                            // TODO: Navigate to About screen
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('About screen coming soon!'),
+                                backgroundColor: Colors.blue,
                               ),
                             );
                           },
