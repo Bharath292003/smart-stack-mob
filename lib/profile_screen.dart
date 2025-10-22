@@ -7,6 +7,7 @@ import 'app_colors.dart';
 import 'trash_bin_screen.dart';
 import 'models.dart';
 import 'my_card_screen.dart';
+import 'categories_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -351,7 +352,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onTap: _navigateToMyCard,
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        
+                        _buildUtilRow(
+                          icon: Icons.category_outlined,
+                          label: 'Categories',
+                          subtitle: 'Manage your card categories',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const CategoriesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        
+                        const SizedBox(height: 12),
                         
                         _buildUtilRow(
                           icon: Icons.delete_outline,
