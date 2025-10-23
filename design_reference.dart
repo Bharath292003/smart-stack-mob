@@ -6,7 +6,7 @@ void main() {
 }
 
 class SmartStackApp extends StatelessWidget {
-  const SmartStackApp({Key? key}) : super(key: key);
+  const SmartStackApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class SmartStackApp extends StatelessWidget {
 }
 
 class SmartStackHome extends StatefulWidget {
-  const SmartStackHome({Key? key}) : super(key: key);
+  const SmartStackHome({super.key});
 
   @override
   State<SmartStackHome> createState() => _SmartStackHomeState();
@@ -243,10 +243,10 @@ class WelcomeScreen extends StatefulWidget {
   final VoidCallback onSignUp;
 
   const WelcomeScreen({
-    Key? key,
+    super.key,
     required this.onLogin,
     required this.onSignUp,
-  }) : super(key: key);
+  });
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -619,10 +619,10 @@ class SignUpScreen extends StatefulWidget {
   final VoidCallback onSignUp;
 
   const SignUpScreen({
-    Key? key,
+    super.key,
     required this.onBack,
     required this.onSignUp,
-  }) : super(key: key);
+  });
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -830,14 +830,14 @@ class HomeScreen extends StatelessWidget {
   final Function(String) onCategoryTap;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.currentUserCard,
     required this.totalCards,
     required this.categories,
     required this.isCardFlipped,
     required this.onFlipCard,
     required this.onCategoryTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -908,7 +908,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
+              SizedBox(
                 width: 40,
                 height: 40,
                 child: const Icon(
@@ -1322,7 +1322,7 @@ class HomeScreen extends StatelessWidget {
 
 // Blinking Arrow Widget
 class BlinkingArrow extends StatefulWidget {
-  const BlinkingArrow({Key? key}) : super(key: key);
+  const BlinkingArrow({super.key});
 
   @override
   State<BlinkingArrow> createState() => _BlinkingArrowState();
@@ -1372,14 +1372,14 @@ class StackScreen extends StatelessWidget {
   final VoidCallback onCloseExpanded;
 
   const StackScreen({
-    Key? key,
+    super.key,
     required this.category,
     required this.cards,
     required this.onBack,
     required this.expandedCard,
     required this.onCardTap,
     required this.onCloseExpanded,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1482,7 +1482,7 @@ class StackScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
+              SizedBox(
                 width: 40,
                 height: 40,
                 child: const Icon(
@@ -1536,10 +1536,10 @@ class CompactBusinessCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const CompactBusinessCard({
-    Key? key,
+    super.key,
     required this.card,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1709,10 +1709,10 @@ class ExpandedCardDialog extends StatelessWidget {
   final VoidCallback onClose;
 
   const ExpandedCardDialog({
-    Key? key,
+    super.key,
     required this.card,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

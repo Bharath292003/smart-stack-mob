@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'user_session.dart';
 import 'app_colors.dart';
-import 'api_helper.dart';
 
 // Card Model
 class CardModel {
@@ -69,11 +67,11 @@ class CompactBusinessCard extends StatelessWidget {
   final Function(CardModel) onShare;
 
   const CompactBusinessCard({
-    Key? key,
+    super.key,
     required this.card,
     required this.onTap,
     required this.onShare,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -255,12 +253,12 @@ class ExpandedCardDialog extends StatelessWidget {
   final Function(CardModel) onShare;
 
   const ExpandedCardDialog({
-    Key? key,
+    super.key,
     required this.card,
     required this.onClose,
     required this.onDelete,
     required this.onShare,
-  }) : super(key: key);
+  });
 
   void _showDeleteConfirmation(BuildContext context, CardModel card) {
     showDialog(
@@ -834,7 +832,7 @@ class ExpandedCardDialog extends StatelessWidget {
 }
 
 class BusinessCardScreen extends StatefulWidget {
-  const BusinessCardScreen({Key? key}) : super(key: key);
+  const BusinessCardScreen({super.key});
 
   @override
   State<BusinessCardScreen> createState() => _BusinessCardScreenState();
@@ -1282,7 +1280,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                   ],
                 ),
               ),
-              Container(
+              SizedBox(
                 width: 40,
                 height: 40,
                 child: const Icon(

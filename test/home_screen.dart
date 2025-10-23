@@ -631,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> {
             text: TextSpan(
               style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
               children: [
-                TextSpan(text: text.split(' ')[0] + ' '),
+                TextSpan(text: '${text.split(' ')[0]} '),
                 TextSpan(
                   text: text.substring(text.indexOf(' ') + 1),
                   style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),

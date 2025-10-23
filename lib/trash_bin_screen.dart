@@ -58,7 +58,7 @@ class DeletedCardModel {
 }
 
 class TrashBinScreen extends StatefulWidget {
-  const TrashBinScreen({Key? key}) : super(key: key);
+  const TrashBinScreen({super.key});
 
   @override
   State<TrashBinScreen> createState() => _TrashBinScreenState();
