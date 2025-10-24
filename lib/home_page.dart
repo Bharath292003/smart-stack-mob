@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -15,7 +14,6 @@ import 'other_card_screen.dart';
 import 'profile_screen.dart';
 import 'models.dart';
 import 'user_session.dart';
-import 'session_debug_helper.dart';
 import 'api_helper.dart';
 import 'my_card_screen.dart';
 
@@ -24,10 +22,10 @@ class HomePage extends StatefulWidget {
   final String? phoneNumber;
 
   const HomePage({
-    Key? key,
+    super.key,
     required this.userName,
     this.phoneNumber,
-  }) : super(key: key);
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -834,7 +832,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       floatingActionButton: FloatingActionButton(
         onPressed: _showCameraOptions,
         backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+        foregroundColor: Colors.white,
+        elevation: 8,
+        child: const Icon(
+          Icons.camera_alt,
+          size: 28,
+        ),
       ),
     );
   }
@@ -1568,6 +1571,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 }
 
 class BlinkingArrow extends StatefulWidget {
+  const BlinkingArrow({super.key});
+
   @override
   State<BlinkingArrow> createState() => _BlinkingArrowState();
 }

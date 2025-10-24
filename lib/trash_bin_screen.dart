@@ -58,7 +58,7 @@ class DeletedCardModel {
 }
 
 class TrashBinScreen extends StatefulWidget {
-  const TrashBinScreen({Key? key}) : super(key: key);
+  const TrashBinScreen({super.key});
 
   @override
   State<TrashBinScreen> createState() => _TrashBinScreenState();
@@ -131,24 +131,37 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
   }
 
   Future<void> _restoreCard(String cardId) async {
-    try {
-      final userId = await UserSession.getUserId();
-      if (userId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User ID not found'),
-            backgroundColor: Colors.red,
-          ),
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Restore Card'),
+          content: const Text('Are you sure you want to restore this card?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.green),
+              child: const Text('Confirm'),
+            ),
+          ],
         );
-        return;
-      }
+      },
+    );
 
+    if (confirmed != true) return;
+
+    try {
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/restore_card'),
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': userId,
           'card_id': cardId,
+          'action': 'restore',
         }),
       );
 
@@ -194,7 +207,7 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: const Text('Confirm'),
             ),
           ],
         );
@@ -204,23 +217,12 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
     if (confirmed != true) return;
 
     try {
-      final userId = await UserSession.getUserId();
-      if (userId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User ID not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final response = await http.delete(
-        Uri.parse('http://34.93.230.130:5001/permanently_delete_card'),
+      final response = await http.post(
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': userId,
           'card_id': cardId,
+          'action': 'delete',
         }),
       );
 

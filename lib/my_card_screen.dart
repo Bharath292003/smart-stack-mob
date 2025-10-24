@@ -9,10 +9,10 @@ class MyCardScreen extends StatefulWidget {
   final Function(BusinessCard) onCardUpdated;
 
   const MyCardScreen({
-    Key? key,
+    super.key,
     required this.currentUserCard,
     required this.onCardUpdated,
-  }) : super(key: key);
+  });
 
   @override
   State<MyCardScreen> createState() => _MyCardScreenState();
