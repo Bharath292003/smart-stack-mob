@@ -21,12 +21,10 @@ class AppColors {
   static const Color slate800 = Color(0xFF1E293B);
   static const Color slate900 = Color(0xFF0F172A);
   
-  // Business card colors (specific colors requested)
+  // Business card colors (alternating navy blue and greyish black)
   static const List<Color> businessCardColors = [
-    Color(0xFF1E293B),
-    Color(0xFF1F2937),
-    Color(0xFF27272A),
-    Color(0xFF262626),
+    Color(0xFF1E293B), // Navy blue
+    Color(0xFF27272A), // Greyish black
   ];
   
   // Gradients using business card colors

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'user_session.dart';
@@ -105,16 +106,19 @@ class CompactBusinessCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.work_outline,
-                        color: Colors.white,
-                        size: 20,
+                      child: const Text(
+                        'BUSINESS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                     ),
                     Container(
@@ -176,67 +180,20 @@ class CompactBusinessCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Contact',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                    if (card.email != null && card.email!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          card.email!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.7),
+                            fontWeight: FontWeight.w400,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'View',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => onShare(card),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.share,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
                   ],
                 ),
               ],
@@ -254,34 +211,57 @@ class ExpandedCardDialog extends StatelessWidget {
   final Function(String) onDelete;
   final Function(CardModel) onShare;
 
+  final bool isEditMode;
+  final TextEditingController emailController;
+  final TextEditingController phoneController;
+  final TextEditingController websiteController;
+  final TextEditingController addressController;
+  final VoidCallback onToggleEdit;
+  final VoidCallback onSave;
+
   const ExpandedCardDialog({
     Key? key,
     required this.card,
     required this.onClose,
     required this.onDelete,
     required this.onShare,
+    required this.isEditMode,
+    required this.emailController,
+    required this.phoneController,
+    required this.websiteController,
+    required this.addressController,
+    required this.onToggleEdit,
+    required this.onSave,
   }) : super(key: key);
 
   void _showDeleteConfirmation(BuildContext context, CardModel card) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Card'),
-          content: const Text('Are you sure you want to delete this business card?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+        return Theme(
+          data: Theme.of(context).copyWith(
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                onDelete(card.cardId);
-              },
-              child: const Text('Yes', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+          ),
+          child: AlertDialog(
+            title: const Text('Delete Card'),
+            content: const Text('Are you sure you want to delete this business card?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDelete(card.cardId);
+                },
+                child: const Text('Yes', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -324,42 +304,33 @@ class ExpandedCardDialog extends StatelessWidget {
 
   Future<void> _launchMaps(BuildContext context, String address) async {
     try {
-      // Clean and encode the address for URL
-      String encodedAddress = Uri.encodeComponent(address.trim());
-      
-      // Try different map URL schemes with fallbacks
-      List<String> mapUrls = [
-        'https://maps.google.com/maps?q=$encodedAddress', // Google Maps web
-        'geo:0,0?q=$encodedAddress', // Generic geo intent
-        'maps:?q=$encodedAddress', // Apple Maps
-      ];
-      
-      bool launched = false;
-      
-      for (String urlString in mapUrls) {
+      final String encodedAddress = Uri.encodeComponent(address.trim());
+
+      // Prefer Google Maps on iOS; use geo intent on Android, then web
+      final List<String> candidates = Platform.isIOS
+          ? [
+              'comgooglemaps://?q=$encodedAddress',
+              'https://maps.google.com/?q=$encodedAddress',
+            ]
+          : [
+              'comgooglemaps://?q=$encodedAddress',
+              'geo:0,0?q=$encodedAddress',
+              'https://maps.google.com/?q=$encodedAddress',
+            ];
+
+      for (final urlString in candidates) {
+        final Uri uri = Uri.parse(urlString);
         try {
-          final Uri mapUri = Uri.parse(urlString);
-          if (await canLaunchUrl(mapUri)) {
-            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
-            launched = true;
-            break;
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            return;
           }
-        } catch (e) {
-          // Continue to next URL if this one fails
-          continue;
+        } catch (_) {
+          // Try next candidate
         }
       }
-      
-      if (!launched) {
-        // Fallback: try platform default mode
-        final Uri fallbackUri = Uri.parse('https://maps.google.com/maps?q=$encodedAddress');
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.platformDefault);
-          launched = true;
-        }
-      }
-      
-      if (!launched && context.mounted) {
+
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not open maps for: $address')),
         );
@@ -387,28 +358,33 @@ class ExpandedCardDialog extends StatelessWidget {
   }
 
   Future<void> _launchEmail(BuildContext context, String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-    );
-    
     try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
-      } else {
-        // Fallback: try with different URI format
-        final String emailUrl = 'mailto:$email';
-        final Uri fallbackUri = Uri.parse(emailUrl);
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('No email app available');
+      // Prefer Gmail if installed, then mailto
+      final List<Uri> candidates = [
+        Uri.parse('googlegmail://co?to=${Uri.encodeComponent(email)}'),
+        Uri.parse('mailto:${Uri.encodeComponent(email)}'),
+      ];
+
+      for (final uri in candidates) {
+        try {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            return;
+          }
+        } catch (_) {
+          // Try next candidate
         }
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch email app. Please check if you have Gmail or an email app installed.')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch email app. Please check if you have an email app installed.')),
+          const SnackBar(content: Text('Error opening email app')),
         );
       }
     }
@@ -482,35 +458,19 @@ class ExpandedCardDialog extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: actualOnTap != null ? const Color(0xFF3B82F6) : const Color(0xFF475569),
+                color: const Color(0xFF64748B),
                 size: 20,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: actualOnTap != null ? const Color(0xFF3B82F6) : const Color(0xFF0F172A),
-                      fontWeight: FontWeight.w400,
-                      decoration: actualOnTap != null ? TextDecoration.underline : null,
-                    ),
-                  ),
-                ],
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
             if (actualOnTap != null)
@@ -530,7 +490,7 @@ class ExpandedCardDialog extends StatelessWidget {
     return GestureDetector(
       onTap: onClose,
       child: Container(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.transparent,
         child: GestureDetector(
           onTap: () {}, // Prevent closing when tapping dialog
           child: Align(
@@ -624,64 +584,70 @@ class ExpandedCardDialog extends StatelessWidget {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        width: 48,
-                                        height: 48,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.15),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
-                                        child: const Icon(
-                                          Icons.work_outline,
-                                          color: Colors.white,
-                                          size: 24,
+                                        child: const Text(
+                                          'BUSINESS',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                            letterSpacing: 0.8,
+                                          ),
                                         ),
                                       ),
                                       Row(
                                         children: [
-                                          Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.15),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: const Icon(
-                                              Icons.edit,
-                                              color: Colors.white,
-                                              size: 18,
+                                          GestureDetector(
+                                            onTap: isEditMode ? onSave : onToggleEdit,
+                                            child: Container(
+                                              width: 28,
+                                              height: 28,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Icon(
+                                                isEditMode ? Icons.check : Icons.edit,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           GestureDetector(
                                             onTap: () => onShare(card),
                                             child: Container(
-                                              width: 36,
-                                              height: 36,
+                                              width: 28,
+                                              height: 28,
                                               decoration: BoxDecoration(
                                                 color: Colors.white.withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: const Icon(
                                                 Icons.share,
                                                 color: Colors.white,
-                                                size: 18,
+                                                size: 14,
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           GestureDetector(
                                             onTap: () => _showDeleteConfirmation(context, card),
                                             child: Container(
-                                              width: 36,
-                                              height: 36,
+                                              width: 28,
+                                              height: 28,
                                               decoration: BoxDecoration(
                                                 color: Colors.white.withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: const Icon(
                                                 Icons.delete_outline,
                                                 color: Colors.white,
-                                                size: 18,
+                                                size: 14,
                                               ),
                                             ),
                                           ),
@@ -763,17 +729,47 @@ class ExpandedCardDialog extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          if (card.email != null)
-                            _buildInfoItem(context, Icons.email_outlined, 'Email', card.email!),
-                          if (card.email != null) const SizedBox(height: 16),
-                          if (card.phone != null)
-                            _buildInfoItem(context, Icons.phone_outlined, 'Phone', card.phone!),
-                          if (card.phone != null) const SizedBox(height: 16),
-                          if (card.website != null)
-                            _buildInfoItem(context, Icons.language, 'Website', card.website!),
-                          if (card.website != null) const SizedBox(height: 16),
-                          if (card.address != null)
-                            _buildInfoItem(context, Icons.location_on_outlined, 'Location', card.address!),
+                          if (isEditMode) ...[
+                            _EditableInfoField(
+                              icon: Icons.email_outlined,
+                              hintText: 'Email',
+                              controller: emailController,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 16),
+                            _EditableInfoField(
+                              icon: Icons.phone_outlined,
+                              hintText: 'Phone',
+                              controller: phoneController,
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 16),
+                            _EditableInfoField(
+                              icon: Icons.language,
+                              hintText: 'Website',
+                              controller: websiteController,
+                              keyboardType: TextInputType.url,
+                            ),
+                            const SizedBox(height: 16),
+                            _EditableInfoField(
+                              icon: Icons.location_on_outlined,
+                              hintText: 'Location',
+                              controller: addressController,
+                              keyboardType: TextInputType.streetAddress,
+                            ),
+                          ] else ...[
+                            if (card.email != null)
+                              _buildInfoItem(context, Icons.email_outlined, 'Email', card.email!),
+                            if (card.email != null) const SizedBox(height: 16),
+                            if (card.phone != null)
+                              _buildInfoItem(context, Icons.phone_outlined, 'Phone', card.phone!),
+                            if (card.phone != null) const SizedBox(height: 16),
+                            if (card.website != null)
+                              _buildInfoItem(context, Icons.language, 'Website', card.website!),
+                            if (card.website != null) const SizedBox(height: 16),
+                            if (card.address != null)
+                              _buildInfoItem(context, Icons.location_on_outlined, 'Location', card.address!),
+                          ],
                           const SizedBox(height: 32),
                           // Action Buttons
                           Row(
@@ -833,6 +829,75 @@ class ExpandedCardDialog extends StatelessWidget {
   }
 }
 
+class _EditableInfoField extends StatelessWidget {
+  final IconData icon;
+  final String hintText;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+
+  const _EditableInfoField({
+    Key? key,
+    required this.icon,
+    required this.hintText,
+    required this.controller,
+    required this.keyboardType,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF94A3B8)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class BusinessCardScreen extends StatefulWidget {
   const BusinessCardScreen({Key? key}) : super(key: key);
 
@@ -846,10 +911,25 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
   int _totalCards = 0;
   CardModel? _expandedCard;
 
+  bool _isDetailsEditMode = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _websiteController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _fetchBusinessCards();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _websiteController.dispose();
+    _addressController.dispose();
+    super.dispose();
   }
 
   // Helper methods for launching external apps
@@ -1181,7 +1261,16 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: CompactBusinessCard(
                                     card: cardWithColor,
-                                    onTap: () => setState(() => _expandedCard = cardWithColor),
+                                    onTap: () {
+                                      setState(() {
+                                        _expandedCard = cardWithColor;
+                                        _isDetailsEditMode = false;
+                                        _emailController.text = cardWithColor.email ?? '';
+                                        _phoneController.text = cardWithColor.phone ?? '';
+                                        _websiteController.text = cardWithColor.website ?? '';
+                                        _addressController.text = cardWithColor.address ?? '';
+                                      });
+                                    },
                                     onShare: _shareCard,
                                   ),
                                 );
@@ -1190,32 +1279,70 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                 ),
               ],
             ),
-            if (_expandedCard != null)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 600),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.0, 1.0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutQuart,
-                    )),
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    ),
-                  );
-                },
-                child: ExpandedCardDialog(
-                  key: ValueKey(_expandedCard!.cardId),
-                  card: _expandedCard!,
-                  onClose: () => setState(() => _expandedCard = null),
-                  onDelete: _deleteCard,
-                  onShare: _shareCard,
-                ),
-              ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 1000),
+              reverseDuration: const Duration(milliseconds: 1000),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInToLinear,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: child,
+                );
+              },
+              child: _expandedCard != null
+                  ? ExpandedCardDialog(
+                      key: ValueKey(_expandedCard!.cardId),
+                      card: _expandedCard!,
+                      isEditMode: _isDetailsEditMode,
+                      emailController: _emailController,
+                      phoneController: _phoneController,
+                      websiteController: _websiteController,
+                      addressController: _addressController,
+                      onToggleEdit: () => setState(() => _isDetailsEditMode = !_isDetailsEditMode),
+                      onSave: () {
+                        if (_expandedCard == null) return;
+                        final updated = CardModel(
+                          cardId: _expandedCard!.cardId,
+                          name: _expandedCard!.name,
+                          jobTitle: _expandedCard!.jobTitle,
+                          company: _expandedCard!.company,
+                          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+                          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+                          website: _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
+                          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+                          additionalInfo: _expandedCard!.additionalInfo,
+                          socialMedia: _expandedCard!.socialMedia,
+                          color: _expandedCard!.color,
+                        );
+                        setState(() {
+                          _expandedCard = updated;
+                          final idx = _businessCards.indexWhere((c) => c.cardId == updated.cardId);
+                          if (idx != -1) {
+                            _businessCards[idx] = updated;
+                          }
+                          _isDetailsEditMode = false;
+                        });
+                      },
+                      onClose: () {
+                        setState(() {
+                          _expandedCard = null;
+                          _isDetailsEditMode = false;
+                        });
+                        _emailController.clear();
+                        _phoneController.clear();
+                        _websiteController.clear();
+                        _addressController.clear();
+                      },
+                      onDelete: _deleteCard,
+                      onShare: _shareCard,
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
