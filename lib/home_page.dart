@@ -832,7 +832,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       floatingActionButton: FloatingActionButton(
         onPressed: _showCameraOptions,
         backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+        foregroundColor: Colors.white,
+        elevation: 8,
+        child: const Icon(
+          Icons.camera_alt,
+          size: 28,
+        ),
       ),
     );
   }

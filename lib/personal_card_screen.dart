@@ -42,6 +42,10 @@ class PersonalCardModel {
   static Color _getRandomColor() {
     return AppColors.getRandomPersonalColor();
   }
+  
+  static Color _getColorByIndex(int index) {
+    return AppColors.getBusinessColorByIndex(index);
+  }
 }
 
 class PersonalCardScreen extends StatefulWidget {
@@ -53,14 +57,22 @@ class PersonalCardScreen extends StatefulWidget {
 
 class _PersonalCardScreenState extends State<PersonalCardScreen> {
   List<PersonalCardModel> _personalCards = [];
+  List<PersonalCardModel> _filteredPersonalCards = [];
   bool _isLoading = true;
   int _totalCards = 0;
   PersonalCardModel? _expandedCard;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchPersonalCards();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPersonalCards() async {
@@ -95,6 +107,7 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
 
         setState(() {
           _personalCards = personalCards;
+          _filteredPersonalCards = personalCards; // Initialize filtered list
           _totalCards = personalCards.length;
           _isLoading = false;
         });
@@ -115,136 +128,229 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            // Header
-            Container(
-              height: 120,
-              decoration: const BoxDecoration(
-                gradient: AppColors.personalGradient,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Personal Cards',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '${_personalCards.length} cards',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Search bar
-            Positioned(
-              top: 90,
-              left: 20,
-              right: 20,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search personal cards...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  ),
-                ),
-              ),
-            ),
-            
-            // Content
-            Positioned(
-              top: 160,
-              left: 0,
-              right: 0,
-              bottom: 0,
+            _buildHeader(),
+            Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _personalCards.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F172A),
+                      ),
+                    )
+                  : _filteredPersonalCards.isEmpty
                       ? _buildEmptyState()
-                      : Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.85,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                            itemCount: _personalCards.length,
-                            itemBuilder: (context, index) {
-                              return _buildCompactPersonalCard(_personalCards[index]);
-                            },
-                          ),
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(24),
+                          itemCount: _filteredPersonalCards.length,
+                          itemBuilder: (context, index) {
+                            final card = _filteredPersonalCards[index];
+                            // Create a new card with color based on index
+                            final cardWithColor = PersonalCardModel(
+                              id: card.id,
+                              name: card.name,
+                              phone: card.phone,
+                              email: card.email,
+                              address: card.address,
+                              notes: card.notes,
+                              relationship: card.relationship,
+                              color: PersonalCardModel._getColorByIndex(index),
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildCompactPersonalCard(cardWithColor),
+                            );
+                          },
                         ),
-            ),
-            
-            // Floating Action Button
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: FloatingActionButton(
-                onPressed: () {
-                  _showTopRightAlert('Add Personal Card - Coming Soon!');
-                },
-                backgroundColor: const Color(0xFF667eea),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    size: 20,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Personal Cards',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w300,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isLoading 
+                          ? 'Loading...' 
+                          : '$_totalCards ${_totalCards == 1 ? 'card' : 'cards'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: const Icon(
+                  Icons.more_vert,
+                  color: Color(0xFF475569),
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Search Bar
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0).withOpacity(0.8),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterCards,
+              decoration: const InputDecoration(
+                hintText: 'Search personal cards',
+                hintStyle: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Color(0xFF94A3B8),
+                  size: 18,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final isSearching = _searchController.text.isNotEmpty;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              isSearching ? Icons.search_off : Icons.person_outline,
+              size: 40,
+              color: const Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            isSearching ? 'No cards found' : 'No personal cards found',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isSearching 
+                ? 'Try adjusting your search terms'
+                : 'Add your first personal card to get started',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Search functionality
+  void _filterCards(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredPersonalCards = _personalCards;
+      } else {
+        _filteredPersonalCards = _personalCards.where((card) {
+          final searchQuery = query.toLowerCase();
+          
+          // Search in all relevant fields
+          final name = card.name?.toLowerCase() ?? '';
+          final relationship = card.relationship?.toLowerCase() ?? '';
+          final email = card.email?.toLowerCase() ?? '';
+          final phone = card.phone?.toLowerCase() ?? '';
+          final address = card.address?.toLowerCase() ?? '';
+          final notes = card.notes?.toLowerCase() ?? '';
+          
+          // Check if query matches any field
+          return name.contains(searchQuery) ||
+                 relationship.contains(searchQuery) ||
+                 email.contains(searchQuery) ||
+                 phone.contains(searchQuery) ||
+                 address.contains(searchQuery) ||
+                 notes.contains(searchQuery);
+        }).toList();
+      }
+    });
   }
 
   Widget _buildCompactPersonalCard(PersonalCardModel card) {
@@ -422,46 +528,7 @@ class _PersonalCardScreenState extends State<PersonalCardScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(40),
-            ),
-            child: const Icon(
-              Icons.person_add,
-              size: 40,
-              color: Color(0xFF10B981),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No Personal Cards',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3748),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first personal card to get started',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showPersonalCardPopup(PersonalCardModel card) {
     showDialog(
