@@ -1129,12 +1129,15 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/delete_card'),
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
         headers: {
           'Content-Type': 'application/json',
           'user_id': userId,
         },
-        body: json.encode({'card_id': cardId}),
+        body: json.encode({
+          'card_id': cardId,
+          'action': 'inactive',
+        }),
       );
 
       if (response.statusCode == 200) {
