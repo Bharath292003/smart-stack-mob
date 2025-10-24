@@ -157,6 +157,20 @@ class CompactBusinessCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          card.additionalInfo!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE2E8F0),
+                            fontWeight: FontWeight.w300,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
                 // Bottom Section
@@ -772,6 +786,10 @@ class ExpandedCardDialog extends StatelessWidget {
                           if (card.website != null) const SizedBox(height: 16),
                           if (card.address != null)
                             _buildInfoItem(context, Icons.location_on_outlined, 'Location', card.address!),
+                          if (card.address != null) const SizedBox(height: 16),
+                          if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty)
+                            _buildInfoItem(context, Icons.info_outline, 'Additional Info', card.additionalInfo!),
+                          if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty) const SizedBox(height: 16),
                           const SizedBox(height: 32),
                           // Action Buttons
                           Row(
