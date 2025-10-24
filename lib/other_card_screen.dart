@@ -239,7 +239,7 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
                 onPressed: () {
                   _showTopRightAlert('Add Other Card - Coming Soon!');
                 },
-                backgroundColor: const Color(0xFF8B5CF6),
+                backgroundColor: AppColors.slate900,
                 child: const Icon(Icons.add, color: Colors.white),
               ),
             ),
@@ -449,13 +449,13 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+              color: AppColors.slate900.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(40),
             ),
             child: const Icon(
               Icons.add_card,
               size: 40,
-              color: Color(0xFF8B5CF6),
+              color: AppColors.slate900,
             ),
           ),
           const SizedBox(height: 24),

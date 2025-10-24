@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'home_page.dart';
 import 'user_session.dart';
-import 'app_colors.dart';
+import 'package:smart_stack/app_colors.dart';
 
 void main() {
   runApp(const SmartStackApp());
@@ -17,13 +17,13 @@ class SmartStackApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart-Stack',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        primaryColor: const Color(0xFF6C63FF),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
-          primary: const Color(0xFF6C63FF),
-          secondary: const Color(0xFF5A52E8),
-        ),
+        primarySwatch: Colors.grey,
+      primaryColor: AppColors.slate900,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.slate900,
+        primary: AppColors.slate900,
+        secondary: AppColors.slate900,
+      ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const SplashScreen(),
