@@ -1,18 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-                     android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    
-    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-    
     <application
-        android:label="Smart Stack"
+        android:label="smart_stack"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
@@ -52,36 +44,22 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        
-        <!-- Add these for camera and gallery -->
-        <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.PICK" />
-            <data android:mimeType="image/*" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.GET_CONTENT" />
-            <data android:mimeType="image/*" />
-        </intent>
-        
-        <!-- Add these for URL launching -->
+        <!-- Allow url_launcher to discover Gmail and Google Maps on Android 11+ -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="http" />
+            <data android:scheme="googlegmail" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="https" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="tel" />
+            <data android:scheme="comgooglemaps" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
         </intent>
     </queries>
 </manifest>

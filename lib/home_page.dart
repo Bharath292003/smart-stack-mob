@@ -1191,8 +1191,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ],
           ),
           Positioned(
-            top: 16,
-            right: 16,
+            top: 8,
+            right: 8,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1223,7 +1223,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Icon(
-                      Icons.flip_to_front,
+                      Icons.close,
                       color: Colors.white,
                       size: 16,
                     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'models.dart';
+import 'app_colors.dart';
 
 class MyCardScreen extends StatefulWidget {
   final BusinessCard currentUserCard;
@@ -194,7 +195,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
               },
               icon: const Icon(
                 Icons.edit_outlined,
-                color: Color(0xFF6366F1),
+                color: AppColors.slate900,
               ),
             )
           else ...[
@@ -224,7 +225,7 @@ class _MyCardScreenState extends State<MyCardScreen> {
                   : const Text(
                       'Save',
                       style: TextStyle(
-                        color: Color(0xFF6366F1),
+                        color: AppColors.slate900,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),

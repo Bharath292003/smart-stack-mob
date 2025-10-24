@@ -23,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? userPhone;
   String? userEmail;
   bool isLoading = true;
+  final _editFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -37,60 +38,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final nameController = TextEditingController(text: userName ?? '');
         final phoneController = TextEditingController(text: userPhone ?? '');
         final emailController = TextEditingController(text: userEmail ?? '');
-        
+
         return AlertDialog(
-          title: const Text('Edit Profile'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-              ],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+          backgroundColor: Colors.white,
+          scrollable: true,
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate900,
             ),
           ),
+          // Adjust dialog content to have constant width and no fixed height
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: SizedBox(
+              width: 560,
+              child: Form(
+                key: _editFormKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: _inputDecoration(label: 'Name', icon: Icons.person_outline),
+                        minLines: 1,
+                        maxLines: 1,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.next,
+                        textAlign: TextAlign.left,
+                        textAlignVertical: TextAlignVertical.center,
+                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: phoneController,
+                        decoration: _inputDecoration(label: 'Phone', icon: Icons.phone_outlined),
+                        keyboardType: TextInputType.phone,
+                        minLines: 1,
+                        maxLines: 1,
+                        textAlign: TextAlign.left,
+                        textAlignVertical: TextAlignVertical.center,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          final digits = v.replaceAll(RegExp(r'\\D'), '');
+                          return digits.length < 7 ? 'Enter a valid phone number' : null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: _inputDecoration(label: 'Email', icon: Icons.email_outlined),
+                        keyboardType: TextInputType.emailAddress,
+                        minLines: 1,
+                        maxLines: 1,
+                        textAlign: TextAlign.left,
+                        textAlignVertical: TextAlignVertical.center,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          final re = RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+                          return re.hasMatch(v.trim()) ? null : 'Enter a valid email';
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.slate600)),
             ),
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Save'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.slate900,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
               onPressed: () async {
-                // Update the user data
+                if (!_editFormKey.currentState!.validate()) return;
                 setState(() {
                   userName = nameController.text.trim();
                   userPhone = phoneController.text.trim();
                   userEmail = emailController.text.trim();
                 });
-                
-                // Save to SharedPreferences
                 await _saveUserData();
-                
                 Navigator.of(context).pop();
-                
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Profile updated successfully'),
@@ -98,7 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 );
               },
-              child: const Text('Save'),
             ),
           ],
         );
@@ -580,26 +624,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            TextButton.icon(
+                            IconButton(
                               onPressed: _editProfile,
                               icon: const Icon(
                                 Icons.edit_outlined,
-                                size: 16,
-                                color: Color(0xFF3B82F6),
+                                size: 18,
+                                color: AppColors.slate900,
                               ),
-                              label: const Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF3B82F6),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              constraints: const BoxConstraints(),
+                              splashRadius: 18,
+                              tooltip: 'Edit',
                             ),
                           ],
                         ),
@@ -940,4 +975,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
+InputDecoration _inputDecoration({required String label, required IconData icon}) {
+  return InputDecoration(
+    labelText: label,
+    prefixIcon: Icon(icon, color: AppColors.slate600),
+    filled: true,
+    fillColor: const Color(0xFFF8FAFC),
+    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+    labelStyle: const TextStyle(color: AppColors.slate600),
+    enabledBorder: OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: const BorderSide(color: AppColors.slate900),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  );
 }
