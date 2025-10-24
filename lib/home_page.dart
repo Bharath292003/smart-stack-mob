@@ -832,7 +832,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       floatingActionButton: FloatingActionButton(
         onPressed: _showCameraOptions,
         backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+        foregroundColor: Colors.white,
+        elevation: 8,
+        child: const Icon(
+          Icons.camera_alt,
+          size: 28,
+        ),
       ),
     );
   }
@@ -948,7 +953,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       ),
       child: Transform.scale(
-        scale: 0.85,
+        scale: 0.95,
         child: AspectRatio(
           aspectRatio: 1.76,
           child: TweenAnimationBuilder<double>(

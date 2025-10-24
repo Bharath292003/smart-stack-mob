@@ -157,6 +157,20 @@ class CompactBusinessCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          card.additionalInfo!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE2E8F0),
+                            fontWeight: FontWeight.w300,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
                 // Bottom Section
@@ -772,6 +786,10 @@ class ExpandedCardDialog extends StatelessWidget {
                           if (card.website != null) const SizedBox(height: 16),
                           if (card.address != null)
                             _buildInfoItem(context, Icons.location_on_outlined, 'Location', card.address!),
+                          if (card.address != null) const SizedBox(height: 16),
+                          if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty)
+                            _buildInfoItem(context, Icons.info_outline, 'Additional Info', card.additionalInfo!),
+                          if (card.additionalInfo != null && card.additionalInfo!.isNotEmpty) const SizedBox(height: 16),
                           const SizedBox(height: 32),
                           // Action Buttons
                           Row(
@@ -840,14 +858,22 @@ class BusinessCardScreen extends StatefulWidget {
 
 class _BusinessCardScreenState extends State<BusinessCardScreen> {
   List<CardModel> _businessCards = [];
+  List<CardModel> _filteredBusinessCards = [];
   bool _isLoading = true;
   int _totalCards = 0;
   CardModel? _expandedCard;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchBusinessCards();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   // Helper methods for launching external apps
@@ -899,13 +925,28 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
   }
 
   Future<void> _launchEmail(String email) async {
-    final Uri emailUri = Uri(scheme: 'mailto', path: email);
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try with different URI format
+        final String emailUrl = 'mailto:$email';
+        final Uri fallbackUri = Uri.parse(emailUrl);
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('No email app available');
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch email app')),
+          const SnackBar(content: Text('Could not launch email app. Please check if you have an email app installed.')),
         );
       }
     }
@@ -1061,6 +1102,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
 
         setState(() {
           _businessCards = businessCards;
+          _filteredBusinessCards = businessCards; // Initialize filtered list
           _totalCards = businessCards.length;
           _isLoading = false;
         });
@@ -1087,12 +1129,15 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/delete_card'),
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
         headers: {
           'Content-Type': 'application/json',
           'user_id': userId,
         },
-        body: json.encode({'card_id': cardId}),
+        body: json.encode({
+          'card_id': cardId,
+          'action': 'inactive',
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -1154,13 +1199,13 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
                             color: Color(0xFF0F172A),
                           ),
                         )
-                      : _businessCards.isEmpty
+                      : _filteredBusinessCards.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
                               padding: const EdgeInsets.all(24),
-                              itemCount: _businessCards.length,
+                              itemCount: _filteredBusinessCards.length,
                               itemBuilder: (context, index) {
-                                final card = _businessCards[index];
+                                final card = _filteredBusinessCards[index];
                                 // Create a new card with color based on index
                                 final cardWithColor = CardModel(
                                   cardId: card.cardId,
@@ -1302,8 +1347,10 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
               ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const TextField(
-              decoration: InputDecoration(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterCards,
+              decoration: const InputDecoration(
                 hintText: 'Search business cards',
                 hintStyle: TextStyle(
                   color: Color(0xFF94A3B8),
@@ -1328,6 +1375,8 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isSearching = _searchController.text.isNotEmpty;
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1339,25 +1388,27 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
               color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(
-              Icons.business_center_outlined,
+            child: Icon(
+              isSearching ? Icons.search_off : Icons.business_center_outlined,
               size: 40,
-              color: Color(0xFF94A3B8),
+              color: const Color(0xFF94A3B8),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'No business cards found',
-            style: TextStyle(
+          Text(
+            isSearching ? 'No cards found' : 'No business cards found',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
               color: Color(0xFF475569),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Add your first business card to get started',
-            style: TextStyle(
+          Text(
+            isSearching 
+                ? 'Try adjusting your search terms'
+                : 'Add your first business card to get started',
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF64748B),
             ),
@@ -1365,5 +1416,38 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
         ],
       ),
     );
+  }
+
+  // Search functionality
+  void _filterCards(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredBusinessCards = _businessCards;
+      } else {
+        _filteredBusinessCards = _businessCards.where((card) {
+          final searchQuery = query.toLowerCase();
+          
+          // Search in all relevant fields
+          final name = card.name?.toLowerCase() ?? '';
+          final jobTitle = card.jobTitle?.toLowerCase() ?? '';
+          final company = card.company?.toLowerCase() ?? '';
+          final email = card.email?.toLowerCase() ?? '';
+          final phone = card.phone?.toLowerCase() ?? '';
+          final website = card.website?.toLowerCase() ?? '';
+          final address = card.address?.toLowerCase() ?? '';
+          final additionalInfo = card.additionalInfo?.toLowerCase() ?? '';
+          
+          // Check if query matches any field
+          return name.contains(searchQuery) ||
+                 jobTitle.contains(searchQuery) ||
+                 company.contains(searchQuery) ||
+                 email.contains(searchQuery) ||
+                 phone.contains(searchQuery) ||
+                 website.contains(searchQuery) ||
+                 address.contains(searchQuery) ||
+                 additionalInfo.contains(searchQuery);
+        }).toList();
+      }
+    });
   }
 }

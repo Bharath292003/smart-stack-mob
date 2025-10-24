@@ -130,6 +130,198 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
     return AppColors.businessCardColors[index % AppColors.businessCardColors.length];
   }
 
+  Future<void> _restoreCard(String cardId) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Restore Card'),
+          content: const Text('Are you sure you want to restore this card?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.green),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'card_id': cardId,
+          'action': 'restore',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Card restored successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _fetchDeletedCards(); // Refresh the list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to restore card'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error restoring card: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _permanentlyDeleteCard(String cardId) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Permanently Delete Card'),
+          content: const Text('This action cannot be undone. Are you sure you want to permanently delete this card?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'card_id': cardId,
+          'action': 'delete',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Card permanently deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _fetchDeletedCards(); // Refresh the list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete card'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting card: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showDeleteAllDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete All Cards'),
+          content: const Text('This will permanently delete all cards in the trash bin. This action cannot be undone. Are you sure?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete All'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final userId = await UserSession.getUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final response = await http.delete(
+        Uri.parse('http://34.93.230.130:5001/delete_all_cards'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All cards permanently deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _fetchDeletedCards(); // Refresh the list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete all cards'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting all cards: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,6 +342,14 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          if (_deletedCards.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_forever, color: Color(0xFF0F172A)),
+              onPressed: _showDeleteAllDialog,
+              tooltip: 'Delete All',
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -268,6 +468,40 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Restore icon
+                GestureDetector(
+                  onTap: () => _restoreCard(card.cardId),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.restore,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Delete permanently icon
+                GestureDetector(
+                  onTap: () => _permanentlyDeleteCard(card.cardId),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.delete_forever,
+                      size: 16,
                       color: Colors.white,
                     ),
                   ),

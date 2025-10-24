@@ -53,14 +53,22 @@ class OtherCardScreen extends StatefulWidget {
 
 class _OtherCardScreenState extends State<OtherCardScreen> {
   List<OtherCardModel> _otherCards = [];
+  List<OtherCardModel> _filteredOtherCards = [];
   bool _isLoading = true;
   int _totalCards = 0;
   OtherCardModel? _expandedCard;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchOtherCards();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchOtherCards() async {
@@ -95,6 +103,7 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
 
         setState(() {
           _otherCards = otherCards;
+          _filteredOtherCards = otherCards; // Initialize filtered list
           _totalCards = otherCards.length;
           _isLoading = false;
         });
@@ -115,147 +124,216 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            // Header
-            Container(
-              height: 120,
-              decoration: const BoxDecoration(
-                gradient: AppColors.otherGradient,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Other Cards',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '${_otherCards.length} cards',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Search bar
-            Positioned(
-              top: 90,
-              left: 20,
-              right: 20,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search other cards...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  ),
-                ),
-              ),
-            ),
-            
-            // Content
-            Positioned(
-              top: 160,
-              left: 0,
-              right: 0,
-              bottom: 0,
+            _buildHeader(),
+            Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _otherCards.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F172A),
+                      ),
+                    )
+                  : _filteredOtherCards.isEmpty
                       ? _buildEmptyState()
-                      : Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.85,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                            itemCount: _otherCards.length,
-                            itemBuilder: (context, index) {
-                              return _buildCompactOtherCard(_otherCards[index]);
-                            },
-                          ),
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(24),
+                          itemCount: _filteredOtherCards.length,
+                          itemBuilder: (context, index) {
+                            final card = _filteredOtherCards[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildCompactOtherCard(card),
+                            );
+                          },
                         ),
             ),
-            
-            // Floating Action Button
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: FloatingActionButton(
-                onPressed: () {
-                  _showTopRightAlert('Add Other Card - Coming Soon!');
-                },
-                backgroundColor: const Color(0xFF8B5CF6),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-            ),
-            
-            // Expanded card dialog
-            if (_expandedCard != null)
-              ExpandedOtherCardDialog(
-                card: _expandedCard!,
-                onClose: () {
-                  setState(() {
-                    _expandedCard = null;
-                  });
-                },
-              ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    size: 20,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Other Cards',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w300,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isLoading 
+                          ? 'Loading...' 
+                          : '$_totalCards ${_totalCards == 1 ? 'card' : 'cards'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: const Icon(
+                  Icons.more_vert,
+                  color: Color(0xFF475569),
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Search Bar
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0).withOpacity(0.8),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterCards,
+              decoration: const InputDecoration(
+                hintText: 'Search other cards',
+                hintStyle: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Color(0xFF94A3B8),
+                  size: 18,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final isSearching = _searchController.text.isNotEmpty;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              isSearching ? Icons.search_off : Icons.credit_card_outlined,
+              size: 40,
+              color: const Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            isSearching ? 'No cards found' : 'No other cards found',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isSearching 
+                ? 'Try adjusting your search terms'
+                : 'Add your first other card to get started',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Search functionality
+  void _filterCards(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredOtherCards = _otherCards;
+      } else {
+        _filteredOtherCards = _otherCards.where((card) {
+          final searchQuery = query.toLowerCase();
+          
+          // Search in all relevant fields
+          final title = card.title?.toLowerCase() ?? '';
+          final type = card.type?.toLowerCase() ?? '';
+          final details = card.details?.toLowerCase() ?? '';
+          final cardId = card.cardId?.toLowerCase() ?? '';
+          final notes = card.notes?.toLowerCase() ?? '';
+          
+          // Check if query matches any field
+          return title.contains(searchQuery) ||
+                 type.contains(searchQuery) ||
+                 details.contains(searchQuery) ||
+                 cardId.contains(searchQuery) ||
+                 notes.contains(searchQuery);
+        }).toList();
+      }
+    });
   }
 
   Widget _buildCompactOtherCard(OtherCardModel card) {
@@ -438,46 +516,7 @@ class _OtherCardScreenState extends State<OtherCardScreen> {
     }
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(40),
-            ),
-            child: const Icon(
-              Icons.add_card,
-              size: 40,
-              color: Color(0xFF8B5CF6),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No Other Cards',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3748),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first card to get started',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+
 
 
 
