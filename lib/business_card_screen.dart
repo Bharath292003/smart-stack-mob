@@ -106,7 +106,7 @@ class CompactBusinessCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -123,7 +123,7 @@ class CompactBusinessCard extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -187,7 +187,7 @@ class CompactBusinessCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -199,7 +199,7 @@ class CompactBusinessCard extends StatelessWidget {
                           card.email!,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w400,
                           ),
                           maxLines: 1,
@@ -244,7 +244,7 @@ class ExpandedCardDialog extends StatelessWidget {
     required this.addressController,
     required this.onToggleEdit,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   void _showDeleteConfirmation(BuildContext context, CardModel card) {
     showDialog(
@@ -580,7 +580,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -598,7 +598,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
+                                          color: Colors.white.withValues(alpha: 0.15),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: const Text(
@@ -619,7 +619,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                               width: 28,
                                               height: 28,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.15),
+                                                color: Colors.white.withValues(alpha: 0.15),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Icon(
@@ -636,7 +636,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                               width: 28,
                                               height: 28,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.15),
+                                                color: Colors.white.withValues(alpha: 0.15),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: const Icon(
@@ -653,7 +653,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                               width: 28,
                                               height: 28,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.15),
+                                                color: Colors.white.withValues(alpha: 0.15),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: const Icon(
@@ -688,7 +688,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                           card.jobTitle!,
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.white.withOpacity(0.8),
+                                            color: Colors.white.withValues(alpha: 0.8),
                                             fontWeight: FontWeight.w400,
                                           ),
                                           maxLines: 1,
@@ -706,7 +706,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
-                                            color: Colors.white.withOpacity(0.95),
+                                            color: Colors.white.withValues(alpha: 0.95),
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -717,7 +717,7 @@ class ExpandedCardDialog extends StatelessWidget {
                                           card.email!,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.white.withOpacity(0.7),
+                                            color: Colors.white.withValues(alpha: 0.7),
                                             fontWeight: FontWeight.w400,
                                           ),
                                           maxLines: 1,
@@ -947,158 +947,8 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
     _phoneController.dispose();
     _websiteController.dispose();
     _addressController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  // Helper methods for launching external apps
-  Future<void> _launchPhone(String phoneNumber) async {
-    // Check if phone number contains multiple numbers (separated by commas or semicolons)
-    List<String> phoneNumbers = phoneNumber.split(RegExp(r'[,;]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    
-    if (phoneNumbers.length > 1) {
-      // Show selection dialog for multiple numbers
-      String? selectedNumber = await showDialog<String>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Select Phone Number'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: phoneNumbers.map((number) {
-                return ListTile(
-                  leading: const Icon(Icons.phone),
-                  title: Text(number),
-                  onTap: () => Navigator.of(context).pop(number),
-                );
-              }).toList(),
-            ),
-          );
-        },
-      );
-      
-      if (selectedNumber != null) {
-        await _makePhoneCall(selectedNumber);
-      }
-    } else {
-      // Single number, launch directly
-      await _makePhoneCall(phoneNumbers.first);
-    }
-  }
-
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch phone dialer')),
-        );
-      }
-    }
-  }
-
-  Future<void> _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-    );
-    
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
-      } else {
-        // Fallback: try with different URI format
-        final String emailUrl = 'mailto:$email';
-        final Uri fallbackUri = Uri.parse(emailUrl);
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('No email app available');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch email app. Please check if you have an email app installed.')),
-        );
-      }
-    }
-  }
-
-  Future<void> _launchWebsite(String website) async {
-    String url = website;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://$url';
-    }
-    
-    final Uri websiteUri = Uri.parse(url);
-    if (await canLaunchUrl(websiteUri)) {
-      await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch website')),
-        );
-      }
-    }
-  }
-
-  Future<void> _launchMaps(String address) async {
-    try {
-      // Clean and encode the address for URL
-      String encodedAddress = Uri.encodeComponent(address.trim());
-      
-      // Try different map URL schemes with fallbacks
-      List<String> mapUrls = [
-        'https://maps.google.com/maps?q=$encodedAddress', // Google Maps web
-        'geo:0,0?q=$encodedAddress', // Generic geo intent
-        'maps:?q=$encodedAddress', // Apple Maps
-      ];
-      
-      bool launched = false;
-      
-      for (String urlString in mapUrls) {
-        try {
-          final Uri mapUri = Uri.parse(urlString);
-          if (await canLaunchUrl(mapUri)) {
-            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
-            launched = true;
-            break;
-          }
-        } catch (e) {
-          // Continue to next URL if this one fails
-          continue;
-        }
-      }
-      
-      if (!launched) {
-        // Fallback: try platform default mode
-        final Uri fallbackUri = Uri.parse('https://maps.google.com/maps?q=$encodedAddress');
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.platformDefault);
-          launched = true;
-        }
-      }
-      
-      if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open maps for: $address')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error opening maps')),
-        );
-      }
-    }
   }
 
   // Share card functionality
@@ -1469,7 +1319,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
               border: Border.all(
-                color: const Color(0xFFE2E8F0).withOpacity(0.8),
+                color: const Color(0xFFE2E8F0).withValues(alpha: 0.8),
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(8),
