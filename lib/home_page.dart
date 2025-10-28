@@ -37,6 +37,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isCardFlipped = false;
   late BusinessCard currentUserCard;
   late List<Category> categories;
+  int _categoriesCount = 4; // Default value, will be updated from API
+  bool _isLoadingCategories = false;
   
   // Image processing state variables
   bool _isProcessingImage = false;
@@ -132,6 +134,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     ];
 
     _fetchTotalCards();
+    _fetchCategoriesCount();
   }
 
   @override
@@ -202,6 +205,54 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } finally {
       setState(() {
         _isLoadingCards = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCategoriesCount() async {
+    setState(() {
+      _isLoadingCategories = true;
+    });
+
+    try {
+      // Get user ID from UserSession
+      final userId = await UserSession.getUserId();
+      
+      if (userId == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+        return;
+      }
+
+      final request = http.Request('GET', Uri.parse('http://34.93.230.130:5001/get_categories'));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode({
+        'user_id': userId,
+      });
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            _categoriesCount = data['count'] ?? 4;
+          });
+        }
+      } else if (response.statusCode == 401) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+    } catch (e) {
+      print('Error fetching categories count: $e');
+    } finally {
+      setState(() {
+        _isLoadingCategories = false;
       });
     }
   }
@@ -1016,9 +1067,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '4',
-                    style: TextStyle(
+                  Text(
+                    '$_categoriesCount',
+                    style: const TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w300,
                       color: Colors.white,
