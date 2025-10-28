@@ -402,7 +402,7 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
                 // Capture Button (only in camera mode)
                 if (!widget.startInGallery && _isCameraInitialized)
                   Positioned(
-                    bottom: 120,
+                    bottom: 150,
                     left: 0,
                     right: 0,
                     child: Center(
@@ -451,7 +451,7 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          height: 90,
+                          height: 60,
                           child: _queue.isEmpty
                               ? Center(
                                   child: Text(
@@ -516,15 +516,16 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            OutlinedButton.icon(
-                              onPressed: _pickFromGallery,
-                              icon: const Icon(Icons.photo_library, color: Colors.white),
-                              label: const Text('Upload Photos'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.white54),
+                            if (widget.startInGallery)
+                              OutlinedButton.icon(
+                                onPressed: _pickFromGallery,
+                                icon: const Icon(Icons.photo_library, color: Colors.white),
+                                label: const Text('Upload Photos'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white54),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],
