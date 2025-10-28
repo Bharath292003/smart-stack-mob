@@ -459,30 +459,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // Handle the result from camera scanner
                   if (result != null && result is Map<String, dynamic>) {
                     if (result['success'] == true) {
-                      // Start processing UI immediately
-                      _startImageProcessing();
-                      
-                      try {
-                        // Process the image data on home screen
-                        final imageBytes = result['imageBytes'];
-                        final fileName = result['fileName'];
-                        
-                        final response = await ApiHelper.uploadImageForCardExtraction(
-                          imageBytes,
-                          fileName,
-                        );
-                        
-                        if (response.statusCode >= 200 && response.statusCode < 300) {
-                          final responseData = json.decode(response.body);
-                          _onProcessingSuccess(responseData);
-                        } else {
-                          _onProcessingError('Processing failed: ${response.statusCode}');
+                      if (result['multiple'] == true && result['images'] is List) {
+                        final List images = result['images'];
+                        _startImageProcessing();
+                        try {
+                          for (int i = 0; i < images.length; i++) {
+                            final img = images[i] as Map<String, dynamic>;
+                            final bytes = img['bytes'];
+                            final name = img['name'];
+                            final response = await ApiHelper.uploadImageForCardExtraction(bytes, name);
+                            // Optionally, handle response per image; for now, proceed sequentially
+                            // Update simple progress indicator
+                            setState(() {
+                              _processingProgress = (i + 1) / images.length;
+                            });
+                            if (!(response.statusCode >= 200 && response.statusCode < 300)) {
+                              // Record error but continue processing others
+                              _processingError = 'Failed one image: ${response.statusCode}';
+                            }
+                          }
+                          // Mark as complete
+                          _onProcessingSuccess({'processedCount': images.length});
+                        } catch (apiError) {
+                          _onProcessingError('Network error: $apiError');
                         }
-                      } catch (apiError) {
-                        _onProcessingError('Network error: $apiError');
+                      } else {
+                        // Single image path (legacy)
+                        _startImageProcessing();
+                        try {
+                          final imageBytes = result['imageBytes'];
+                          final fileName = result['fileName'];
+                          final response = await ApiHelper.uploadImageForCardExtraction(
+                            imageBytes,
+                            fileName,
+                          );
+                          if (response.statusCode >= 200 && response.statusCode < 300) {
+                            final responseData = json.decode(response.body);
+                            _onProcessingSuccess(responseData);
+                          } else {
+                            _onProcessingError('Processing failed: ${response.statusCode}');
+                          }
+                        } catch (apiError) {
+                          _onProcessingError('Network error: $apiError');
+                        }
                       }
                     } else {
-                      // Handle error case
                       _onProcessingError(result['error'] ?? 'Unknown error occurred');
                     }
                   }
@@ -517,9 +538,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color: Color(0xFF64748B),
                   ),
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  _pickImageFromGallery();
+                  // Directly open gallery for multi-select and process without scanner UI
+                  await _pickImagesFromGalleryMulti();
                 },
               ),
               const SizedBox(height: 20),
@@ -611,6 +633,76 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } catch (e) {
       print('Error selecting image: $e');
       _onProcessingError('Error selecting image: $e');
+    }
+  }
+
+  // New: pick multiple images directly and process (no scanner UI)
+  Future<void> _pickImagesFromGalleryMulti() async {
+    try {
+      if (kIsWeb) {
+        // Web: multi-select via file_picker
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
+
+        if (result != null) {
+          final images = result.files
+              .where((f) => f.bytes != null)
+              .map((f) => {
+                    'bytes': f.bytes!,
+                    'name': f.name,
+                  })
+              .toList();
+
+          if (images.isEmpty) return;
+
+          _startImageProcessing();
+          try {
+            for (int i = 0; i < images.length; i++) {
+              final img = images[i] as Map<String, dynamic>;
+              final bytes = img['bytes'] as List<int>;
+              final name = img['name'] as String;
+              final response = await ApiHelper.uploadImageForCardExtraction(bytes, name);
+              setState(() {
+                _processingProgress = (i + 1) / images.length;
+              });
+              if (!(response.statusCode >= 200 && response.statusCode < 300)) {
+                _processingError = 'Failed one image: ${response.statusCode}';
+              }
+            }
+            _onProcessingSuccess({'processedCount': images.length});
+          } catch (apiError) {
+            _onProcessingError('Network error: $apiError');
+          }
+        }
+      } else {
+        // Mobile: multi-select via image_picker
+        final ImagePicker picker = ImagePicker();
+        final List<XFile> images = await picker.pickMultiImage(imageQuality: 80);
+        if (images.isEmpty) return;
+
+        _startImageProcessing();
+        try {
+          for (int i = 0; i < images.length; i++) {
+            final image = images[i];
+            final bytes = await image.readAsBytes();
+            final name = image.name;
+            final response = await ApiHelper.uploadImageForCardExtraction(bytes, name);
+            setState(() {
+              _processingProgress = (i + 1) / images.length;
+            });
+            if (!(response.statusCode >= 200 && response.statusCode < 300)) {
+              _processingError = 'Failed one image: ${response.statusCode}';
+            }
+          }
+          _onProcessingSuccess({'processedCount': images.length});
+        } catch (apiError) {
+          _onProcessingError('Network error: $apiError');
+        }
+      }
+    } catch (e) {
+      _onProcessingError('Error selecting images: $e');
     }
   }
 
