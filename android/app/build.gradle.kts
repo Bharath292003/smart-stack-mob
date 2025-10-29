@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smart_stack"
+    namespace = "com.smart_stack.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,12 +16,13 @@ android {
     }
 
     kotlinOptions {
+
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.smart_stack"
+        applicationId = "com.smart_stack.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
