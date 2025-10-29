@@ -514,14 +514,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       _startImageProcessing();
                       
                       try {
-                        // Process the image data on home screen
-                        final imageBytes = result['imageBytes'];
-                        final fileName = result['fileName'];
+                        // Check if we have dual images or single image
+                        final firstImageBytes = result['firstImageBytes'];
+                        final firstImageFileName = result['firstImageFileName'];
+                        final secondImageBytes = result['secondImageBytes'];
+                        final secondImageFileName = result['secondImageFileName'];
                         
-                        final response = await ApiHelper.uploadImageForCardExtraction(
-                          imageBytes,
-                          fileName,
-                        );
+                        http.Response response;
+                        
+                        if (firstImageBytes != null && firstImageFileName != null) {
+                          // Use dual image API if we have the first image
+                          response = await ApiHelper.uploadDualImagesForCardExtraction(
+                            firstImageBytes,
+                            firstImageFileName,
+                            secondImageBytes: secondImageBytes,
+                            secondFileName: secondImageFileName,
+                          );
+                        } else {
+                          // Fallback to single image for backward compatibility
+                          final imageBytes = result['imageBytes'];
+                          final fileName = result['fileName'];
+                          
+                          response = await ApiHelper.uploadImageForCardExtraction(
+                            imageBytes,
+                            fileName,
+                          );
+                        }
                         
                         if (response.statusCode >= 200 && response.statusCode < 300) {
                           final responseData = json.decode(response.body);

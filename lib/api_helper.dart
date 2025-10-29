@@ -142,4 +142,52 @@ class ApiHelper {
     // Convert streamed response to regular response
     return await http.Response.fromStream(streamedResponse);
   }
+
+  /// Upload dual images for card extraction (supports 1 or 2 images)
+  static Future<http.Response> uploadDualImagesForCardExtraction(
+    List<int> firstImageBytes,
+    String firstFileName, {
+    List<int>? secondImageBytes,
+    String? secondFileName,
+  }) async {
+    final userId = await UserSession.getUserId();
+    
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/extract-card'),
+    );
+
+    // Add user_id to the request
+    request.fields['user_id'] = userId;
+
+    // Add the first image (required)
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image1', // field name for first image
+        firstImageBytes,
+        filename: firstFileName,
+      ),
+    );
+
+    // Add the second image if provided (optional)
+    if (secondImageBytes != null && secondFileName != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image2', // field name for second image
+          secondImageBytes,
+          filename: secondFileName,
+        ),
+      );
+    }
+
+    // Send the request
+    var streamedResponse = await request.send();
+    
+    // Convert streamed response to regular response
+    return await http.Response.fromStream(streamedResponse);
+  }
 }
