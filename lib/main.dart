@@ -1,10 +1,20 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'login_page.dart';
-import 'home_page.dart';
-import 'user_session.dart';
 import 'package:smart_stack/app_colors.dart';
+import 'package:smart_stack/app_constants.dart';
 
-void main() {
+import 'home_page.dart';
+import 'login_page.dart';
+import 'user_session.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase only if the flag is enabled
+  if (AppConstants.isFirebaseAuthenticationNeeded) {
+    await Firebase.initializeApp();
+  }
+
   runApp(const SmartStackApp());
 }
 
@@ -17,12 +27,12 @@ class SmartStackApp extends StatelessWidget {
       title: 'Smart-Stack',
       theme: ThemeData(
         primarySwatch: Colors.grey,
-      primaryColor: AppColors.slate900,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.slate900,
-        primary: AppColors.slate900,
-        secondary: AppColors.slate900,
-      ),
+        primaryColor: AppColors.slate900,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.slate900,
+          primary: AppColors.slate900,
+          secondary: AppColors.slate900,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const SplashScreen(),
@@ -47,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkLoginStatus() async {
     await Future.delayed(const Duration(seconds: 2)); // Splash screen delay
-    
+
     // Use UserSession for consistent session management
     final isLoggedIn = await UserSession.isLoggedIn();
     final userName = await UserSession.getUserName() ?? '';
@@ -58,18 +68,14 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(
-              userName: userName,
-              phoneNumber: phoneNumber,
-            ),
+            builder: (context) =>
+                HomePage(userName: userName, phoneNumber: phoneNumber),
           ),
         );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
-          ),
+          MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
     }
