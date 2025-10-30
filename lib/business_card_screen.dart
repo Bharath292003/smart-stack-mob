@@ -306,7 +306,7 @@ class ExpandedCardDialog extends StatelessWidget {
 
       // Create a new contact
       final newContact = Contact()
-        ..name = Name(nickname: card.name ?? 'Unknown')
+        ..name = Name(first: card.name ?? 'Unknown')
         ..organizations = card.company != null
             ? [
                 Organization(
