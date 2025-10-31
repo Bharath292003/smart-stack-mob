@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+
+import 'firebase_auth_service.dart';
 import 'home_page.dart';
 import 'user_session.dart';
-import 'firebase_auth_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -77,7 +80,8 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    if (_passwordController.text.isEmpty || _passwordController.text.length < 6) {
+    if (_passwordController.text.isEmpty ||
+        _passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password must be at least 6 characters'),
@@ -129,10 +133,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(error), backgroundColor: Colors.red),
             );
           }
         },
@@ -196,11 +197,9 @@ class _SignUpPageState extends State<SignUpPage> {
       });
 
       if (mounted) {
+        log('eroor $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -215,9 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
       try {
         final response = await http.post(
           Uri.parse('http://34.93.230.130:5001/register'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
           body: json.encode({
             'user_name': _nameController.text,
             'phone': _phoneController.text,
@@ -228,12 +225,12 @@ class _SignUpPageState extends State<SignUpPage> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           // Registration successful
           final responseData = json.decode(response.body);
-          
+
           // Extract user data from response
           String userId = responseData['user_id']?.toString() ?? '';
           String userName = _nameController.text;
           String userPhone = _phoneController.text;
-          
+
           // Save user data using UserSession utility
           if (userId.isNotEmpty) {
             await UserSession.saveUserData(
@@ -242,15 +239,13 @@ class _SignUpPageState extends State<SignUpPage> {
               userName: userName,
             );
           }
-          
+
           if (mounted) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => HomePage(
-                  userName: userName,
-                  phoneNumber: userPhone,
-                ),
+                builder: (context) =>
+                    HomePage(userName: userName, phoneNumber: userPhone),
               ),
             );
           }
@@ -433,8 +428,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           onPressed: _isLoading
                               ? null
                               : (_otpSent && !_isOtpVerified
-                                  ? _verifyOTP
-                                  : _sendOTP),
+                                    ? _verifyOTP
+                                    : _sendOTP),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
@@ -450,7 +445,9 @@ class _SignUpPageState extends State<SignUpPage> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : Text(
@@ -504,32 +501,20 @@ class _SignUpPageState extends State<SignUpPage> {
           validator: validator,
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 14,
-            ),
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE2E8F0),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE2E8F0),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFF94A3B8),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF94A3B8), width: 1),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

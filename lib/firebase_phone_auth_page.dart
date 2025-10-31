@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:smart_stack/app_colors.dart';
 import 'package:smart_stack/firebase_auth_service.dart';
-import 'package:smart_stack/user_session.dart';
 import 'package:smart_stack/home_page.dart';
+import 'package:smart_stack/user_session.dart';
 
 class FirebasePhoneAuthPage extends StatefulWidget {
   const FirebasePhoneAuthPage({super.key});
@@ -87,7 +86,9 @@ class _FirebasePhoneAuthPageState extends State<FirebasePhoneAuthPage> {
           onVerificationCompleted: (credential) async {
             // Auto-verification completed (Android only)
             try {
-              final userCredential = await _authService.signInWithCredential(credential);
+              final userCredential = await _authService.signInWithCredential(
+                credential,
+              );
               await _handleSuccessfulLogin(userCredential.user);
             } catch (e) {
               if (mounted) {
@@ -108,17 +109,14 @@ class _FirebasePhoneAuthPageState extends State<FirebasePhoneAuthPage> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
       }
     }
   }
 
-  Future<void> _verifyOTP() async {
+  Future<void> _verifyOTP([bool isRegister = false]) async {
     if (_otpFormKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -134,6 +132,9 @@ class _FirebasePhoneAuthPageState extends State<FirebasePhoneAuthPage> {
           otpCode: _otpController.text.trim(),
         );
 
+        if (isRegister) {
+          return;
+        }
         await _handleSuccessfulLogin(userCredential.user);
       } catch (e) {
         setState(() {
@@ -469,10 +470,7 @@ class _FirebasePhoneAuthPageState extends State<FirebasePhoneAuthPage> {
           const SizedBox(height: 16),
           Text(
             'Enter the 6-digit code sent to $_phoneNumber',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF64748B),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 32),
           const Text(

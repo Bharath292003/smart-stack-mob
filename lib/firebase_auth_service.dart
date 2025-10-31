@@ -69,9 +69,14 @@ class FirebaseAuthService {
         verificationId: verificationId,
         smsCode: otpCode,
       );
+      print('credintial $credential');
 
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+
       return userCredential;
+
     } on FirebaseAuthException catch (e) {
       if (e.code == 'invalid-verification-code') {
         throw 'Invalid OTP code. Please try again';
@@ -80,11 +85,16 @@ class FirebaseAuthService {
       } else {
         throw e.message ?? 'Verification failed';
       }
+    } catch (e) {
+      print('eeorrr: $e');
+      throw e.toString();
     }
   }
 
   /// Sign in with phone credential (used for auto-verification)
-  Future<UserCredential> signInWithCredential(PhoneAuthCredential credential) async {
+  Future<UserCredential> signInWithCredential(
+    PhoneAuthCredential credential,
+  ) async {
     return await _auth.signInWithCredential(credential);
   }
 
