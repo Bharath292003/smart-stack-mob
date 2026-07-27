@@ -5,7 +5,7 @@ import 'user_session.dart';
 /// ApiHelper class to handle API requests with automatic user_id inclusion
 /// This utility makes it easy to make authenticated API calls throughout the app
 class ApiHelper {
-  static const String baseUrl = 'http://34.93.230.130:5001';
+  static const String baseUrl = 'http://44.205.85.205:5001';
 
   /// Make a GET request with automatic user_id inclusion
   static Future<http.Response> get(String endpoint, {Map<String, String>? additionalHeaders}) async {

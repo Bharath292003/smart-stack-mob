@@ -351,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (userId == null) return;
 
       final response = await http.get(
-        Uri.parse('http://34.93.230.130:5001/cards/$userId'),
+        Uri.parse('http://44.205.85.205:5001/cards/$userId'),
         headers: {'Content-Type': 'application/json'},
       );
 

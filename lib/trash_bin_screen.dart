@@ -90,7 +90,7 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
         return;
       }
 
-      final request = http.Request('GET', Uri.parse('http://34.93.230.130:5001/deleted_cards'));
+      final request = http.Request('GET', Uri.parse('http://44.205.85.205:5001/deleted_cards'));
       request.headers['Content-Type'] = 'application/json';
       request.body = json.encode({
         'user_id': userId,
@@ -157,7 +157,7 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
+        Uri.parse('http://44.205.85.205:5001/delete_or_restore'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'card_id': cardId,
@@ -218,7 +218,7 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
+        Uri.parse('http://44.205.85.205:5001/delete_or_restore'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'card_id': cardId,
@@ -289,7 +289,7 @@ class _TrashBinScreenState extends State<TrashBinScreen> {
       }
 
       final response = await http.delete(
-        Uri.parse('http://34.93.230.130:5001/delete_all_cards'),
+        Uri.parse('http://44.205.85.205:5001/delete_all_cards'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'user_id': userId,

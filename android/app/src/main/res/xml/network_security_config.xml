@@ -16,7 +16,7 @@
     
     <!-- For production: Allow your cloud API IP address -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">34.93.230.130</domain>
+        <domain includeSubdomains="false">44.205.85.205</domain>
     </domain-config>
     
     <!-- For production: Allow your cloud API domain -->

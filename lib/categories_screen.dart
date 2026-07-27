@@ -45,7 +45,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         return;
       }
 
-      final request = http.Request('GET', Uri.parse('http://34.93.230.130:5001/get_categories'));
+      final request = http.Request('GET', Uri.parse('http://44.205.85.205:5001/get_categories'));
       request.headers['Content-Type'] = 'application/json';
       request.body = json.encode({
         'user_id': userId,
@@ -212,7 +212,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/add_category'),
+        Uri.parse('http://44.205.85.205:5001/add_category'),
         headers: {
           'Content-Type': 'application/json',
         },

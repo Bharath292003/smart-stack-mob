@@ -1016,7 +1016,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://34.93.230.130:5001/cards/$userId'),
+        Uri.parse('http://44.205.85.205:5001/cards/$userId'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -1059,7 +1059,7 @@ class _BusinessCardScreenState extends State<BusinessCardScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://34.93.230.130:5001/delete_or_restore'),
+        Uri.parse('http://44.205.85.205:5001/delete_or_restore'),
         headers: {
           'Content-Type': 'application/json',
           'user_id': userId,
